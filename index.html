@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>金洲工作室 · 重量核算</title>
+<style>
+:root{
+  --bg:#F4F2EC; --card:#FFFFFF; --ink:#2C2C2A; --muted:#6B6A65; --hint:#9A988F;
+  --line:#E3E0D7; --line2:#CFCBBF; --accent:#1D7A5A; --accent-bg:#E1F5EE;
+  --warn:#854F0B; --warn-bg:#FAEEDA; --danger:#A32D2D; --danger-bg:#FCEBEB;
+  --intake:#F1EFE8; --weigh:#E1F5EE; --calc:#EEEDFE; --fin:#FAEEDA;
+  --radius:9px;
+}
+*{box-sizing:border-box;}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Noto Sans TC",sans-serif;
+  background:var(--bg);color:var(--ink);font-size:14px;line-height:1.5;-webkit-text-size-adjust:100%;}
+.wrap{max-width:1100px;margin:0 auto;padding:0 14px 96px;}
+header{position:sticky;top:0;z-index:30;background:var(--bg);padding:12px 0 8px;border-bottom:1px solid var(--line);}
+.h-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.logo{font-size:17px;font-weight:600;}
+.logo small{font-weight:400;color:var(--muted);font-size:12px;margin-left:4px;}
+.sync-state{margin-left:auto;font-size:12px;color:var(--hint);display:flex;align-items:center;gap:6px;}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--line2);}
+.dot.ok{background:var(--accent);}
+.dot.err{background:var(--danger);}
+nav{display:flex;gap:4px;margin-top:10px;flex-wrap:wrap;}
+.nav-btn{border:1px solid var(--line);background:var(--card);color:var(--muted);padding:7px 14px;border-radius:999px;
+  font-size:13px;cursor:pointer;transition:.12s;}
+.nav-btn:hover{border-color:var(--line2);}
+.nav-btn.active{background:var(--ink);color:#fff;border-color:var(--ink);}
+.tab{display:none;padding-top:16px;}
+.tab.active{display:block;}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:16px 18px;margin-bottom:14px;}
+.card h2{font-size:15px;font-weight:600;margin:0 0 12px;}
+.card h2 .sub{font-weight:400;color:var(--muted);font-size:12px;margin-left:6px;}
+label.fl{display:block;font-size:12px;color:var(--muted);margin:0 0 4px;}
+input,select,button{font-family:inherit;font-size:14px;}
+input[type=text],input[type=number],input[type=date],input[type=datetime-local],select{
+  width:100%;height:36px;padding:0 10px;border:1px solid var(--line2);border-radius:var(--radius);
+  background:#fff;color:var(--ink);outline:none;transition:.12s;}
+input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg);}
+.btn{height:36px;padding:0 16px;border-radius:var(--radius);border:1px solid var(--line2);background:#fff;
+  color:var(--ink);cursor:pointer;transition:.12s;white-space:nowrap;}
+.btn:hover{background:#FAF9F5;border-color:var(--ink);}
+.btn:active{transform:scale(.98);}
+.btn.primary{background:var(--ink);color:#fff;border-color:var(--ink);}
+.btn.primary:hover{background:#444;}
+.btn.accent{background:var(--accent);color:#fff;border-color:var(--accent);}
+.btn.ghost{border:none;background:transparent;color:var(--muted);padding:0 8px;height:30px;}
+.btn.ghost:hover{color:var(--danger);background:transparent;}
+.btn.sm{height:30px;padding:0 12px;font-size:13px;}
+.grid{display:grid;gap:10px;}
+.g-batch{grid-template-columns:repeat(auto-fit,minmax(140px,1fr));}
+.flex{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+.pill{display:inline-block;font-size:11px;padding:2px 9px;border-radius:999px;font-weight:500;}
+.pill.korea{background:#FBEAF0;color:#993556;}
+.pill.china_normal,.pill.china_special{background:#FAEEDA;color:#854F0B;}
+.pill.japan{background:#E6F1FB;color:#0C447C;}
+.pill.unknown{background:var(--warn-bg);color:var(--warn);}
+.pill.forward{background:#E1F5EE;color:#0F6E56;}
+.pill.friend{background:#EEEDFE;color:#3C3489;}
+.muted{color:var(--muted);}
+.hint{color:var(--hint);font-size:12px;}
+.batch-card{cursor:pointer;display:flex;align-items:center;gap:12px;}
+.batch-card:hover{border-color:var(--line2);background:#FAF9F5;}
+.batch-card .b-main{flex:1;min-width:0;}
+.batch-card .b-title{font-weight:600;font-size:14px;}
+.tbl-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:10px;}
+table.items{width:100%;border-collapse:collapse;font-size:13px;min-width:920px;}
+table.items th{text-align:left;font-weight:500;padding:8px 8px;white-space:nowrap;font-size:12px;}
+table.items th small{display:block;font-weight:400;font-size:10px;color:var(--hint);margin-top:1px;}
+table.items td{padding:5px 8px;border-top:1px solid var(--line);vertical-align:middle;}
+table.items th.t-intake{background:var(--intake);color:#444441;}
+table.items th.t-weigh{background:var(--weigh);color:#0F6E56;}
+table.items th.t-calc{background:var(--calc);color:#3C3489;}
+table.items th.t-fin{background:var(--fin);color:#854F0B;}
+table.items td input,table.items td select{height:30px;font-size:13px;padding:0 6px;}
+.num{text-align:right;font-variant-numeric:tabular-nums;}
+td.num input{text-align:right;}
+table.items td.w-name{min-width:210px;}
+table.items td.w-name input{width:100%;}
+table.items td input.w-s,table.items td select.w-s{width:72px;}
+table.items td input.w-xs{width:64px;}
+table.items td input[type=number]::-webkit-inner-spin-button,
+table.items td input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;}
+table.items td input[type=number]{-moz-appearance:textfield;}
+.legend{display:flex;gap:8px;flex-wrap:wrap;font-size:11px;margin:0 0 10px;}
+.legend span{padding:3px 9px;border-radius:6px;}
+.lg-intake{background:var(--intake);color:#444441;}
+.lg-weigh{background:var(--weigh);color:#0F6E56;}
+.lg-calc{background:var(--calc);color:#3C3489;}
+.lg-fin{background:var(--fin);color:#854F0B;}
+.totals{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:12px;}
+.stat{background:#FAF9F5;border-radius:10px;padding:10px 12px;}
+.stat .l{font-size:11px;color:var(--muted);}
+.stat .v{font-size:18px;font-weight:600;font-variant-numeric:tabular-nums;margin-top:2px;}
+.note{background:var(--accent-bg);color:#0F6E56;border-radius:8px;padding:9px 12px;font-size:12.5px;margin-top:10px;}
+.note.warn{background:var(--warn-bg);color:var(--warn);}
+.back{font-size:13px;color:var(--accent);cursor:pointer;display:inline-flex;align-items:center;gap:4px;margin-bottom:10px;}
+.empty{text-align:center;color:var(--hint);padding:36px 10px;}
+.rate-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;}
+.rate-grid .stat .v{font-size:15px;}
+.s-row{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+.s-row .fl{margin:0;min-width:96px;}
+.tag{font-size:11px;color:var(--accent);background:var(--accent-bg);padding:1px 6px;border-radius:5px;margin-left:4px;}
+.del-x{color:var(--hint);cursor:pointer;font-size:16px;line-height:1;padding:4px;}
+.del-x:hover{color:var(--danger);}
+.right{margin-left:auto;}
+@media(max-width:640px){.card{padding:13px 13px;}.wrap{padding:0 10px 96px;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <div class="h-row">
+    <div class="logo">重量核算 <small>金洲工作室 · 取代手動重量表</small></div>
+    <div class="sync-state" id="cloud-state"><span class="dot" id="cloud-dot"></span><span id="cloud-text">雲端</span></div>
+    <div class="sync-state" id="sync-state" style="margin-left:12px;"><span class="dot" id="sync-dot"></span><span id="sync-text">費率</span></div>
+  </div>
+  <nav>
+    <button class="nav-btn active" data-tab="batches" onclick="switchTab('batches',this)">批次</button>
+    <button class="nav-btn" data-tab="search" onclick="switchTab('search',this)">查歷史重量</button>
+    <button class="nav-btn" data-tab="settings" onclick="switchTab('settings',this)">設定 · 費率</button>
+  </nav>
+</header>
+
+<!-- ===== BATCHES ===== -->
+<section id="tab-batches" class="tab active">
+  <div id="batch-list-view">
+    <div class="card">
+      <h2>新增批次 <span class="sub">一線一批，到倉就開</span></h2>
+      <div class="grid g-batch">
+        <div>
+          <label class="fl">線別</label>
+          <select id="nb-line">
+            <option value="korea">韓國</option>
+            <option value="china_normal">中國普貨</option>
+            <option value="china_special">中國特貨</option>
+            <option value="japan">日本</option>
+          </select>
+        </div>
+        <div>
+          <label class="fl">回台 / 打包日期</label>
+          <input type="date" id="nb-date">
+        </div>
+        <div style="display:flex;align-items:flex-end;">
+          <button class="btn primary" style="width:100%;" onclick="createBatch()">＋ 建立批次</button>
+        </div>
+      </div>
+    </div>
+    <div id="batch-list"></div>
+  </div>
+
+  <div id="batch-detail-view" style="display:none;"></div>
+</section>
+
+<!-- ===== SEARCH ===== -->
+<section id="tab-search" class="tab">
+  <div class="card">
+    <h2>查歷史重量 <span class="sub">定價參考：這個商品以前回台都多重</span></h2>
+    <input type="text" id="search-input" placeholder="輸入商品名關鍵字，例：dossy、娃衣、SKZOO" oninput="renderSearch()">
+    <div id="search-result" style="margin-top:12px;"></div>
+  </div>
+</section>
+
+<!-- ===== SETTINGS ===== -->
+<section id="tab-settings" class="tab">
+  <div class="card">
+    <h2>雲端後端 <span class="sub">批次資料存這裡，多人共用、會計可讀</span></h2>
+    <div class="s-row">
+      <label class="fl">後端網址</label>
+      <input type="text" id="set-backend" placeholder="重量核算的 GAS /exec 網址">
+      <button class="btn accent sm" onclick="saveBackendUrl()">儲存並重讀</button>
+    </div>
+    <div class="hint" id="backend-hint">批次每次變動會即時存到這張雲端表（去重更新，不會重複列）。</div>
+    <div class="s-row" style="margin-top:10px;">
+      <label class="fl">你的名字</label>
+      <input type="text" id="set-user" placeholder="用於修改軌跡（追責每一次改動）">
+      <button class="btn sm" onclick="saveUser()">儲存</button>
+    </div>
+    <div class="hint" id="user-hint">每次改動會記下是誰改的，寫進「修改軌跡」分頁。</div>
+  </div>
+  <div class="card">
+    <h2>費率來源 <span class="sub">即時取自 pricing-app，工作室改一次這裡自動跟</span></h2>
+    <div class="s-row">
+      <label class="fl">GAS 網址</label>
+      <input type="text" id="set-gasurl" placeholder="貼上 pricing-app 的 GAS 網址">
+      <button class="btn accent sm" onclick="syncFromCloud(true)">🔄 同步費率＋商品</button>
+    </div>
+    <div class="hint" id="sync-detail">尚未同步。同步後會抓 pricing-app 的即時費率與商品歷史。</div>
+  </div>
+  <div class="card">
+    <h2>目前使用中的費率 <span class="sub" id="rate-source">內建預設值</span></h2>
+    <div class="rate-grid" id="rate-display"></div>
+    <div class="note" style="margin-top:12px;">代購補款＝<b>max(0, 最終計重×(現行運費＋關稅) − 預估總重×(定價運費＋關稅))</b>，非親友再 ÷ (1−營業稅−金流)。費率漲一律計差額、實際落地成本超出預估才向客人收；降價多賺自動吸收、不退。代運費＝最終計重×代運費率（親友免稅金流）。</div>
+  </div>
+</section>
+</div>
+
+<script>
+// ====================== CONFIG ======================
+// 工作室內部 GAS 端點（與 pricing-app 共用）。如日後把此檔放公開 repo，清空這行即可。
+// 🔒 網址不寫死在檔案裡（避免上公開 GitHub 外洩後端）。改由書籤網址的 #g=/#b= 帶入、存本機 localStorage。
+const DEFAULT_GAS_URL = '';       // pricing 費率/商品端點（#g= 帶入）
+const DEFAULT_BACKEND_URL = '';   // 重量核算後端（#b= 帶入）
+
+const DEFAULT_RATES = {
+  shipping:  { korea:145, china_normal:130, china_special:200, japan:270, hk:100 },
+  tariff:    { korea:55,  china_normal:15,  china_special:15,  japan:0,   hk:0   },
+  forwarding:{ korea:230, china_normal:158, china_special:200, japan:300, hk:120 },
+  fees:      { business_tax:5, payment_fee:1.5 }
+};
+
+const LINES = {
+  korea:        { label:'韓國',     cur:'KRW', sym:'₩'   },
+  china_normal: { label:'中國普貨', cur:'CNY', sym:'¥'   },
+  china_special:{ label:'中國特貨', cur:'CNY', sym:'¥'   },
+  japan:        { label:'日本',     cur:'TWD', sym:'NT$' }
+};
+
+// ====================== STATE ======================
+let batches = [];
+let rates = JSON.parse(JSON.stringify(DEFAULT_RATES));
+let rateSource = '內建預設值';
+let priceIndex = {};   // product(lower) -> {product, est_g, priceRate, shipType, customer, finalPrice}
+let productNames = []; // for datalist
+let currentBatchId = null;
+
+const LS_BATCHES='weight_app_batches', LS_RATES='weight_app_rates', LS_GAS='weight_app_gasurl', LS_IDX='weight_app_pidx', LS_BACKEND='weight_app_backend';
+
+// ====================== UTIL ======================
+function uid(){ return 'x'+Math.floor(performance.now()*1000).toString(36)+Math.floor(performance.timeOrigin%1e6).toString(36)+(batches.length); }
+function feeFactor(){ return 1 - (rates.fees.business_tax||5)/100 - (rates.fees.payment_fee||1.5)/100; }
+function esc(s){ return (s==null?'':String(s)).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function n(v){ const x=parseFloat(v); return isFinite(x)?x:0; }
+function fmt(x){ return Math.round(x).toLocaleString(); }
+
+// ====================== PERSIST ======================
+function save(){ localStorage.setItem(LS_BATCHES, JSON.stringify(batches)); if(currentBatchId) scheduleCloudSave(currentBatchId); }
+function load(){
+  try{ batches = JSON.parse(localStorage.getItem(LS_BATCHES)||'[]'); }catch(e){ batches=[]; }
+  try{ const r=JSON.parse(localStorage.getItem(LS_RATES)||'null'); if(r){ rates=r.rates; rateSource=r.source||'雲端同步'; } }catch(e){}
+  try{ const idx=JSON.parse(localStorage.getItem(LS_IDX)||'null'); if(idx){ priceIndex=idx; productNames=Object.values(idx).map(v=>v.product); } }catch(e){}
+}
+
+// ====================== CLOUD BACKEND (批次讀寫) ======================
+function backendUrl(){ return localStorage.getItem(LS_BACKEND) || DEFAULT_BACKEND_URL; }
+function setCloud(state,text){ const d=document.getElementById('cloud-dot'); if(d) d.className='dot'+(state?' '+state:''); const t=document.getElementById('cloud-text'); if(t) t.textContent=text; }
+function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
+
+// ---- 修改軌跡（追責每一次改動）----
+let auditBuf=[];
+const FIELD_ZH={product:'品名',customer:'客人',friend:'親友',qty:'數量',code:'包裹4碼',status:'狀態',est:'預估每件重',actual:'實秤總重',type:'類型',priceRate:'定價運費率',label:'日期',line:'線別',billed:'帳單計費重(g)',freight:'國際運費',tariff:'關稅'};
+function fieldZh(f){ return FIELD_ZH[f]||f; }
+function whoami(){ return localStorage.getItem('weight_app_user')||'(未署名)'; }
+function ensureUser(){ if(!localStorage.getItem('weight_app_user')){ const nm=prompt('請輸入你的名字（會記在修改軌跡，用來追責每一次改動）'); if(nm&&nm.trim()) localStorage.setItem('weight_app_user', nm.trim()); } }
+function saveUser(){ const v=(document.getElementById('set-user').value||'').trim(); localStorage.setItem('weight_app_user', v); const h=document.getElementById('user-hint'); if(h) h.textContent='目前操作者：'+(v||'(未署名)'); }
+function logChange(b, item, action, field, oldV, newV){
+  const disp=v=> v===true?'是':v===false?'否':(v==null?'':String(v));
+  auditBuf.push({ batchId:b.id, line:(LINES[b.line]||{}).label||b.line, date:b.label||'',
+    t:new Date().toLocaleString('zh-TW',{hour12:false}), by:whoami(), item:item||'', action:action, field:field||'', old:disp(oldV), new:disp(newV) });
+}
+function auditRow(a){ return { 時間:a.t, 操作者:a.by, 線別:a.line, 批次日期:a.date, 批次ID:a.batchId, 項目:a.item, 動作:a.action, 欄位:a.field, 原值:a.old, 新值:a.new }; }
+
+// 依鎖定 schema 組三張表：主明細/應收客人/批次彙總。🚨只列原幣、不換匯；代運標代收代付
+function buildCloudPayload(b){
+  const L=LINES[b.line]||{label:b.line,cur:'TWD'};
+  const sum=sumActual(b);
+  const detail=[], ar=[];
+  let sFreight=0,sTariff=0,sCharge=0,sForward=0,sFinal=0,qtySum=0;
+  b.items.forEach(it=>{
+    const c=computeItem(b,it); const isFwd=it.type==='forward'; const ok=it.status==='ok';
+    if(ok){ sFreight+=c.allocFreight; sTariff+=c.allocTariff; sFinal+=c.final; qtySum+=it.qty; if(isFwd) sForward+=c.charge; else sCharge+=c.charge; }
+    detail.push({
+      _key:b.id+'_'+it.id, batchId:b.id, 批次ID:b.id, 線別:L.label, 批次日期:b.label,
+      商品名:it.product||'', 客人:it.customer||'', 親友:it.friend?'是':'',
+      類型:isFwd?'代運':'代購', 數量:it.qty, 包裹4碼:it.code||'', 狀態:ok?'已確認':'未確認',
+      預估每件重g:it.est||'', 預估總重g:ok?((it.est*it.qty)||''):'', 定價運費率:it.priceRate||'',
+      實秤總重g:it.actual||'', 最終計重g:ok?c.final:'', 單件最終計重g:(ok&&it.qty>1&&c.final)?Math.round(c.final/it.qty):(ok?c.final:''),
+      原幣別:L.cur, '分攤運費(原幣)':ok?c.allocFreight:'', '分攤關稅(TWD)':ok?c.allocTariff:'',
+      成本性質:isFwd?'代收代付':'進貨成本',
+      '超重補款(TWD)':isFwd?'':(ok?c.charge:''), '代運費(TWD)':isFwd?(ok?c.charge:''):'',
+      收款性質:isFwd?'代運費':(c.charge>0?'超重補款':'')
+    });
+    if(ok && c.charge>0) ar.push({ _key:b.id+'_'+it.id, batchId:b.id, 線別:L.label, 批次日期:b.label,
+      客人:it.customer||'', 親友:it.friend?'是':'', 商品名:it.product||'', 數量:it.qty,
+      類型:isFwd?'代運':'代購', 收款性質:isFwd?'代運費':'超重補款', '應收金額(TWD)':c.charge, 認列狀態:'待收' });
+  });
+  const summary={ batchId:b.id, 線別:L.label, 批次日期:b.label,
+    帳單計費總重KG:b.billed?b.billed/1000:'', 實秤合計g:sum, 件數:qtySum, 品項筆數:b.items.length,
+    '國際運費(原幣)':b.freight||'', 原幣別:L.cur, '關稅(TWD)':b.line==='japan'?0:(b.tariff||''),
+    最終計重合計g:sFinal, '分攤運費原幣合計':sFreight, '分攤關稅TWD合計':sTariff,
+    '應收補款TWD合計':sCharge, '代運費TWD合計':sForward };
+  return { batchId:b.id, json:b, detail, ar, summary };
+}
+
+let cloudPending=new Set(), cloudTimer=null;
+async function pushBatch(b){
+  const url=backendUrl(); if(!url) return false;
+  const payload=buildCloudPayload(b);
+  const sent=auditBuf.filter(a=>a.batchId===b.id);
+  payload.audit=sent.map(auditRow);
+  try{ const r=await fetch(url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify(payload)}).then(x=>x.json());
+    if(r&&r.success){ auditBuf=auditBuf.filter(a=>sent.indexOf(a)<0); return true; } return false; }
+  catch(e){ return false; }
+}
+function scheduleCloudSave(id){
+  if(!backendUrl()||!id) return;
+  cloudPending.add(id); setCloud('','待同步…');
+  clearTimeout(cloudTimer); cloudTimer=setTimeout(flushCloud,1400);
+}
+async function flushCloud(){
+  const ids=[...cloudPending]; cloudPending.clear(); if(!ids.length) return;
+  setCloud('','同步中…'); let ok=true;
+  for(const id of ids){ const b=batches.find(x=>x.id===id); if(b){ if(!await pushBatch(b)) ok=false; await sleep(300); } }
+  setCloud(ok?'ok':'err', ok?'雲端已同步':'雲端同步失敗');
+}
+async function deleteFromCloud(id){
+  const url=backendUrl(); if(!url) return;
+  const sent=auditBuf.filter(a=>a.batchId===id); auditBuf=auditBuf.filter(a=>a.batchId!==id);
+  setCloud('','同步中…');
+  try{ await fetch(url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body:JSON.stringify({deleteBatch:id, audit:sent.map(auditRow)})}); setCloud('ok','雲端已同步'); }
+  catch(e){ setCloud('err','雲端同步失敗'); }
+}
+async function loadFromCloud(){
+  const url=backendUrl(); if(!url){ setCloud('','未設定'); return; }
+  setCloud('','讀取雲端…');
+  try{
+    const r=await fetch(url+'?action=batches&t='+Date.now()).then(x=>x.json());
+    if(r&&r.success&&Array.isArray(r.batches)){
+      batches=r.batches; localStorage.setItem(LS_BATCHES, JSON.stringify(batches));
+      setCloud('ok','雲端已同步');
+      if(currentBatchId && !batches.find(b=>b.id===currentBatchId)) closeBatch();
+      else if(currentBatchId) renderBatchDetail();
+      renderBatchList();
+    } else setCloud('err','雲端讀取失敗');
+  }catch(e){ setCloud('err','離線·用本機'); }
+}
+function saveBackendUrl(){ const v=(document.getElementById('set-backend').value||'').trim(); localStorage.setItem(LS_BACKEND,v); loadFromCloud(); }
+
+// ====================== TABS ======================
+function switchTab(tab, btn){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+tab).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  if(tab==='settings') renderRates();
+  if(tab==='search') renderSearch();
+}
+
+// ====================== BATCH LIST ======================
+function todayStr(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function createBatch(){
+  ensureUser();
+  const line = document.getElementById('nb-line').value;
+  const label = document.getElementById('nb-date').value || todayStr();
+  const b = { id:uid(), line, label, billed:0, freight:0, tariff:0, items:[], created:Date.now() };
+  batches.unshift(b);
+  logChange(b,'(批次)','建立批次','','',((LINES[line]||{}).label||line)+' '+label);
+  save();
+  openBatch(b.id);
+  scheduleCloudSave(b.id);
+}
+function updBatchLabel(val){ const b=curBatch(); if(!b) return; const oldV=b.label; b.label=val; if(String(oldV||'')!==String(val||'')) logChange(b,'(批次)','改批次','日期',oldV,val); save(); renderBatchList(); }
+function deleteBatch(id){
+  const b=batches.find(x=>x.id===id);
+  if(!confirm('刪除批次「'+(b?b.label:'')+'」？此批所有商品紀錄會一起刪除。')) return;
+  ensureUser();
+  if(b) logChange(b,'(批次)','刪除批次','', ((LINES[b.line]||{}).label||b.line)+' '+b.label, '');
+  batches = batches.filter(x=>x.id!==id); localStorage.setItem(LS_BATCHES, JSON.stringify(batches));
+  deleteFromCloud(id); closeBatch();
+}
+function renderBatchList(){
+  const el=document.getElementById('batch-list');
+  const warn = !backendUrl() ? '<div class="card" style="border-color:#EF9F27;background:var(--warn-bg)"><b style="color:var(--warn)">尚未連到雲端</b><div class="hint" style="color:var(--warn)">請用工作室提供的「書籤網址」開啟本工具（網址含設定），資料才會存雲端；或到「設定」頁貼上後端網址。</div></div>' : '';
+  if(!batches.length){ el.innerHTML=warn+'<div class="card empty">還沒有批次。上方選線別、開第一批。</div>'; return; }
+  el.innerHTML = warn + batches.map(b=>{
+    const L=LINES[b.line]||{label:b.line};
+    const okCnt=b.items.filter(i=>i.status==='ok').length;
+    const unk=b.items.filter(i=>i.status==='unknown').length;
+    return `<div class="card batch-card" onclick="openBatch('${b.id}')">
+      <span class="pill ${b.line}">${esc(L.label)}</span>
+      <div class="b-main">
+        <div class="b-title">${esc(b.label)}</div>
+        <div class="hint">${b.items.length} 筆商品${unk?'（'+unk+' 筆未確認）':''}　·　帳單計費 ${b.billed?fmt(b.billed)+' g':'未填'}</div>
+      </div>
+      <span class="hint">開啟 ›</span>
+    </div>`;
+  }).join('');
+}
+
+// ====================== BATCH DETAIL ======================
+function openBatch(id){
+  ensureUser();
+  currentBatchId=id;
+  document.getElementById('batch-list-view').style.display='none';
+  const v=document.getElementById('batch-detail-view'); v.style.display='block';
+  renderBatchDetail();
+  window.scrollTo(0,0);
+}
+function closeBatch(){
+  flushCloud();
+  currentBatchId=null;
+  document.getElementById('batch-detail-view').style.display='none';
+  document.getElementById('batch-list-view').style.display='block';
+  renderBatchList();
+}
+function curBatch(){ return batches.find(b=>b.id===currentBatchId); }
+
+function addItem(){
+  const b=curBatch(); if(!b) return;
+  b.items.push({ id:uid(), product:'', type:'regular', customer:'', friend:false, qty:1, code:'',
+    status:'ok', est:0, priceRate:0, actual:0 });
+  logChange(b,'(新列)','新增商品','','','新增一列');
+  save(); renderBatchDetail();
+}
+function delItem(iid){ const b=curBatch(); const it=b.items.find(i=>i.id===iid); if(it) logChange(b, it.product||'(未命名)','刪除商品','', it.product||'', ''); b.items=b.items.filter(i=>i.id!==iid); save(); renderBatchDetail(); }
+
+function updItem(iid, field, val){
+  const b=curBatch(); const it=b.items.find(i=>i.id===iid); if(!it) return;
+  const oldV = it[field];
+  if(field==='friend'){ it.friend=val; }
+  else if(['qty','est','actual'].includes(field)){ it[field]=n(val); }
+  else if(field==='product'){
+    it.product=val;
+    const hit=priceIndex[val.trim().toLowerCase()];
+    if(hit){ it.est=hit.est_g; it.priceRate=hit.priceRate; if(hit.customer&&!it.customer) it.customer=hit.customer; it._linked=true; }
+    else { it._linked=false; }
+  }
+  else { it[field]=val; }
+  const newV = it[field];
+  if(String(oldV==null?'':oldV)!==String(newV==null?'':newV)) logChange(b, it.product||'(未命名)', '改商品', fieldZh(field), oldV, newV);
+  save(); renderBatchDetail();
+}
+function updBatch(field,val){ const b=curBatch(); const oldV=b[field]; b[field]=n(val); if(String(oldV||'')!==String(b[field]||'')) logChange(b,'(批次)','改批次',fieldZh(field),oldV,b[field]); save(); renderBatchDetail(); }
+function updBilledKg(kg){ const b=curBatch(); const oldV=b.billed; b.billed=Math.round(n(kg)*1000); if(oldV!==b.billed) logChange(b,'(批次)','改批次','帳單計費重(g)',oldV,b.billed); save(); renderBatchDetail(); }
+function autoBilled(){
+  const b=curBatch(); const sum=sumActual(b);
+  b.billed = Math.ceil(sum/1000)*1000; save(); renderBatchDetail();
+}
+
+function sumActual(b){ return b.items.filter(i=>i.status==='ok' && i.actual>0).reduce((s,i)=>s+i.actual,0); }
+
+// ---- core compute for one item ----
+function computeItem(b, it){
+  const r={ final:0, over:0, charge:0, chargeLabel:'', allocFreight:0, allocTariff:0 };
+  if(it.status!=='ok') return r;
+  const sum=sumActual(b);
+  const factor = sum>0 && b.billed>0 ? b.billed/sum : 0;
+  r.final = Math.round(it.actual*factor);
+  // 分攤運費(原幣)/關稅(TWD) 按最終計重
+  if(b.billed>0){
+    r.allocFreight = Math.round(b.freight * r.final / b.billed);
+    r.allocTariff  = (b.line==='japan')?0:Math.round(b.tariff * r.final / b.billed);
+  }
+  const shipRate = rates.shipping[b.line]||0;
+  const tariffRate = rates.tariff[b.line]||0;
+  if(it.type==='forward'){
+    // 代運費：純按最終計重 × 代運費率（包稅率），親友免營業稅+金流 gross-up
+    const fRate = (rates.forwarding[b.line]||{}).rate||0;
+    const base = (r.final/1000)*fRate;
+    r.charge = it.friend ? Math.round(base) : Math.ceil(base/feeFactor());
+    r.chargeLabel='代運費';
+  } else {
+    // 代購補款：實際落地成本(運費+關稅) − 預估已付。費率漲一律計差額；max(0)→超出預估才收，降價自動吸收
+    const estTotal = it.est*it.qty;                       // g 預估總重
+    r.over = r.final - estTotal;                          // g（帶正負，僅顯示）
+    const r0 = it.priceRate>0 ? it.priceRate : shipRate;  // 定價時運費率
+    const actualCost = (r.final/1000)*(shipRate+tariffRate);
+    const estCost    = (estTotal/1000)*(r0+tariffRate);
+    const c = Math.max(0, actualCost - estCost);
+    r.charge = it.friend ? Math.round(c) : (c>0?Math.ceil(c/feeFactor()):0);
+    r.chargeLabel='補款';
+  }
+  return r;
+}
+
+function renderBatchDetail(){
+  const b=curBatch(); if(!b){ closeBatch(); return; }
+  const L=LINES[b.line]||{label:b.line,sym:'NT$'};
+  let tFinal=0,tFreight=0,tTariff=0,tCharge=0;
+  const rows=b.items.map(it=>{
+    const c=computeItem(b,it);
+    tFinal+=c.final; tFreight+=c.allocFreight; tTariff+=c.allocTariff; tCharge+=c.charge;
+    const unknown = it.status==='unknown';
+    const overCell = it.type==='forward' ? '<span class="hint">—</span>'
+      : (c.over>0?`<span style="color:var(--danger)">+${c.over}</span>`:(c.over<0?`<span class="hint">${c.over}</span>`:'0'));
+    return `<tr>
+      <td class="w-name">
+        <input type="text" list="pnames" value="${esc(it.product)}" placeholder="商品名"
+          onchange="updItem('${it.id}','product',this.value)">
+        ${it._linked?'<span class="tag">帶入定價</span>':''}
+      </td>
+      <td><select class="w-s" onchange="updItem('${it.id}','type',this.value)">
+        <option value="regular"${it.type==='regular'?' selected':''}>代購</option>
+        <option value="forward"${it.type==='forward'?' selected':''}>代運</option>
+      </select></td>
+      <td><input type="text" class="w-s" value="${esc(it.customer)}" placeholder="—"
+        onchange="updItem('${it.id}','customer',this.value)"></td>
+      <td style="text-align:center"><input type="checkbox" ${it.friend?'checked':''}
+        onchange="updItem('${it.id}','friend',this.checked)" title="親友免稅金流"></td>
+      <td class="num"><input type="number" class="w-xs num" value="${it.qty}" min="1"
+        onchange="updItem('${it.id}','qty',this.value)"></td>
+      <td><input type="text" class="w-s" value="${esc(it.code)}" placeholder="4碼"
+        onchange="updItem('${it.id}','code',this.value)"></td>
+      <td><select class="w-s" onchange="updItem('${it.id}','status',this.value)">
+        <option value="ok"${it.status==='ok'?' selected':''}>已確認</option>
+        <option value="unknown"${unknown?' selected':''}>未知</option>
+      </select></td>
+      <td class="num">${it.type==='forward'?'<span class="hint">—</span>':`<input type="number" class="w-s num" value="${it.est||''}" placeholder="每件g" onchange="updItem('${it.id}','est',this.value)">`}</td>
+      <td class="num">${unknown?'<span class="pill unknown">未確認</span>':`<input type="number" class="w-s num" value="${it.actual||''}" placeholder="總g" onchange="updItem('${it.id}','actual',this.value)">`}</td>
+      <td class="num">${unknown?'—':fmt(c.final)+(it.qty>1&&c.final?`<div class="hint" style="font-size:10px">每件 ${fmt(c.final/it.qty)}</div>`:'')}</td>
+      <td class="num">${unknown?'—':overCell}</td>
+      <td class="num">${unknown?'—':(c.charge>0?'NT$'+fmt(c.charge):(it.type==='forward'?'—':'0'))}</td>
+      <td class="num">${unknown?'—':L.sym+fmt(c.allocFreight)}</td>
+      <td class="num">${b.line==='japan'?'<span class="hint">—</span>':(unknown?'—':'NT$'+fmt(c.allocTariff))}</td>
+      <td><span class="del-x" onclick="delItem('${it.id}')" title="刪除">×</span></td>
+    </tr>`;
+  }).join('');
+
+  const sum=sumActual(b);
+  const suggestKg=Math.ceil(sum/1000);
+  const v=document.getElementById('batch-detail-view');
+  v.innerHTML=`
+  <div class="back" onclick="closeBatch()">‹ 回批次列表</div>
+  <div class="card">
+    <div class="flex">
+      <span class="pill ${b.line}">${esc(L.label)}</span>
+      <input type="date" value="${esc(b.label)}" style="max-width:200px;font-weight:600;" onchange="updBatchLabel(this.value)">
+      <button class="btn ghost right" onclick="deleteBatch('${b.id}')">刪除批次</button>
+    </div>
+    <div class="grid g-batch" style="margin-top:14px;">
+      <div>
+        <label class="fl">帳單計費總重 (KG)　<span class="hint">貨運帳單重，不滿1KG進位</span></label>
+        <div class="flex" style="gap:6px;flex-wrap:nowrap;">
+          <input type="number" step="0.1" value="${b.billed?b.billed/1000:''}" placeholder="KG" onchange="updBilledKg(this.value)">
+          <button class="btn sm" title="用實秤合計進位到KG" onclick="autoBilled()">⤴${suggestKg}KG</button>
+        </div>
+        <div class="hint">實秤合計 ${fmt(sum)} g ≈ ${(sum/1000).toFixed(2)} KG</div>
+      </div>
+      <div>
+        <label class="fl">國際運費（${L.sym}，原幣）</label>
+        <input type="number" value="${b.freight||''}" placeholder="${L.sym}" onchange="updBatch('freight',this.value)">
+        <div class="hint">打包時已知，不換匯</div>
+      </div>
+      <div>
+        <label class="fl">關稅（NT$）</label>
+        <input type="number" value="${b.tariff||''}" placeholder="${b.line==='japan'?'日線無關稅':'NT$'}" ${b.line==='japan'?'disabled':''} onchange="updBatch('tariff',this.value)">
+        <div class="hint">${b.line==='japan'?'日本包稅，免填':'抵台核算後填'}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="flex" style="margin-bottom:8px;">
+      <h2 style="margin:0;">商品明細</h2>
+      <button class="btn sm right" onclick="addItem()">＋ 加一筆</button>
+    </div>
+    <div class="legend">
+      <span class="lg-intake">到倉登記</span>
+      <span class="lg-weigh">回台計重</span>
+      <span class="lg-calc">自動分攤</span>
+      <span class="lg-fin">財務攤提</span>
+    </div>
+    <div class="tbl-scroll">
+    <table class="items">
+      <thead><tr>
+        <th class="t-intake">商品名</th>
+        <th class="t-intake">類型</th>
+        <th class="t-intake">客人</th>
+        <th class="t-intake">親友</th>
+        <th class="t-intake num">數量</th>
+        <th class="t-intake">包裹4碼</th>
+        <th class="t-intake">狀態</th>
+        <th class="t-calc num">預估重<small>每件</small></th>
+        <th class="t-weigh num">實秤含箱<small>全部數量總重</small></th>
+        <th class="t-calc num">最終計重<small>全部數量</small></th>
+        <th class="t-calc num">超重g<small>總重−預估</small></th>
+        <th class="t-fin num">補款/代運</th>
+        <th class="t-fin num">分攤運費</th>
+        <th class="t-fin num">分攤關稅</th>
+        <th class="t-fin"></th>
+      </tr></thead>
+      <tbody>${rows||'<tr><td colspan="15" class="empty">還沒有商品，點「＋ 加一筆」開始登記</td></tr>'}</tbody>
+    </table>
+    </div>
+    <div class="totals">
+      <div class="stat"><div class="l">最終計重合計</div><div class="v">${fmt(tFinal)} <span class="hint" style="font-size:12px">g</span></div></div>
+      <div class="stat"><div class="l">應收補款/代運合計</div><div class="v">NT$${fmt(tCharge)}</div></div>
+      <div class="stat"><div class="l">分攤運費合計</div><div class="v">${L.sym}${fmt(tFreight)}</div></div>
+      <div class="stat"><div class="l">分攤關稅合計</div><div class="v">${b.line==='japan'?'—':'NT$'+fmt(tTariff)}</div></div>
+    </div>
+    ${b.billed<=0?'<div class="note warn">尚未填「帳單計費總重」，最終計重與分攤先顯示 0。秤完整批帳單重後填上即自動分攤。</div>':''}
+    <div class="note">補款用即時費率：${esc(L.label)} 國際運費 NT$${rates.shipping[b.line]||0}/kg、關稅 NT$${rates.tariff[b.line]||0}/kg、代運 NT$${(rates.forwarding[b.line]||{}).rate||0}/kg。降價多賺自動吸收、不退。勾「親友」免 ${(100-feeFactor()*100).toFixed(1)}% 稅金流。</div>
+  </div>`;
+}
+
+// ====================== SEARCH ======================
+function renderSearch(){
+  const q=(document.getElementById('search-input').value||'').trim().toLowerCase();
+  const el=document.getElementById('search-result');
+  // 歷史最終單位重：彙整各批次 ok 商品
+  const hist={};
+  batches.forEach(b=>b.items.forEach(it=>{
+    if(it.status!=='ok'||!it.product) return;
+    const c=computeItem(b,it); if(!c.final) return;
+    const unit=it.qty>0?Math.round(c.final/it.qty):c.final;
+    const k=it.product.trim();
+    (hist[k]=hist[k]||[]).push(unit);
+  }));
+  if(!q){ el.innerHTML='<div class="hint">輸入關鍵字查詢。資料來源：本工具已核算過的批次（最終單位重）＋ pricing-app 定價預估重。</div>'; return; }
+  const out=[];
+  // 1) 本工具實測歷史
+  Object.keys(hist).filter(k=>k.toLowerCase().includes(q)).forEach(k=>{
+    const arr=hist[k]; const avg=Math.round(arr.reduce((s,x)=>s+x,0)/arr.length);
+    out.push(`<div class="card" style="margin-bottom:8px;"><b>${esc(k)}</b><div class="hint">實測最終單位重（近 ${arr.length} 次）：${arr.map(fmt).join(' / ')} g　·　平均 <b style="color:var(--accent)">${fmt(avg)} g</b></div></div>`);
+  });
+  // 2) pricing-app 預估重
+  Object.values(priceIndex).filter(v=>v.product.toLowerCase().includes(q)).slice(0,12).forEach(v=>{
+    out.push(`<div class="card" style="margin-bottom:8px;"><b>${esc(v.product)}</b><div class="hint">定價預估重 ${fmt(v.est_g)} g　·　定價運費率 ${v.priceRate}/kg　·　${esc((LINES[v.shipType]||{}).label||v.shipType||'')}</div></div>`);
+  });
+  el.innerHTML = out.length?out.join(''):'<div class="hint">查無資料，這會是第一筆。</div>';
+}
+
+// ====================== SETTINGS / SYNC ======================
+function renderRates(){
+  var sb=document.getElementById('set-backend'); if(sb) sb.value = backendUrl();
+  var su=document.getElementById('set-user'); if(su){ su.value=localStorage.getItem('weight_app_user')||''; }
+  document.getElementById('set-gasurl').value = localStorage.getItem(LS_GAS)||DEFAULT_GAS_URL;
+  document.getElementById('rate-source').textContent = rateSource;
+  const lines=['korea','china_normal','china_special','japan'];
+  document.getElementById('rate-display').innerHTML = lines.map(k=>{
+    const L=LINES[k];
+    return `<div class="stat"><div class="l">${L.label}</div>
+      <div class="v">運 ${rates.shipping[k]} <span class="hint" style="font-size:11px">/ 關 ${rates.tariff[k]} / 代運 ${(rates.forwarding[k]||{}).rate}</span></div></div>`;
+  }).join('') + `<div class="stat"><div class="l">營業稅 / 金流</div><div class="v">${rates.fees.business_tax}% / ${rates.fees.payment_fee}%</div></div>`;
+}
+function setSync(state,text){
+  const dot=document.getElementById('sync-dot'); dot.className='dot'+(state?' '+state:'');
+  document.getElementById('sync-text').textContent=text;
+}
+async function syncFromCloud(manual){
+  const url=(document.getElementById('set-gasurl')?document.getElementById('set-gasurl').value:'')||localStorage.getItem(LS_GAS)||DEFAULT_GAS_URL;
+  if(!url){ if(manual) alert('請先貼上 GAS 網址'); return; }
+  localStorage.setItem(LS_GAS,url);
+  setSync('','同步中…');
+  const det=document.getElementById('sync-detail');
+  try{
+    const s=await fetch(url+'?action=getSettings&t='+Date.now()).then(r=>r.json());
+    if(s.success && s.settings){
+      const cs=JSON.parse(s.settings);
+      if(cs.shipping&&cs.tariff){ rates={shipping:cs.shipping,tariff:cs.tariff,forwarding:cs.forwarding||DEFAULT_RATES.forwarding,fees:cs.fees||DEFAULT_RATES.fees}; rateSource='雲端同步 · '+new Date().toLocaleString('zh-TW',{hour12:false}); }
+    }
+    const d=await fetch(url+'?t='+Date.now()).then(r=>r.json());
+    if(d.success && d.records){
+      const idx={};
+      d.records.forEach(r=>{
+        if(r.type!=='regular'||!r.product||!(r.weight>0)) return;
+        const key=r.product.trim().toLowerCase();
+        const prev=idx[key];
+        if(!prev || (r.timestamp||'')>(prev._ts||'')){
+          idx[key]={ product:r.product.trim(), est_g:Math.round(r.weight*1000),
+            priceRate: r.intlShipTWD>0?Math.round(r.intlShipTWD/r.weight):(rates.shipping[r.shippingType]||0),
+            shipType:r.shippingType||'', customer:r.customer||'', finalPrice:r.finalPrice||0, _ts:r.timestamp||'' };
+        }
+      });
+      priceIndex=idx; productNames=Object.values(idx).map(v=>v.product);
+      localStorage.setItem(LS_IDX, JSON.stringify(idx));
+    }
+    localStorage.setItem(LS_RATES, JSON.stringify({rates,source:rateSource}));
+    fillDatalist();
+    setSync('ok','已同步費率＋'+productNames.length+'品');
+    if(det) det.innerHTML='✅ 已同步：費率取自 pricing-app，商品歷史 '+productNames.length+' 筆可自動補全。';
+    renderRates();
+    if(currentBatchId) renderBatchDetail();
+  }catch(e){
+    setSync('err','同步失敗，用內建費率');
+    if(det) det.textContent='⚠️ 同步失敗（'+e.message+'）。先用內建費率，商品自動補全暫不可用。';
+  }
+}
+function fillDatalist(){
+  let dl=document.getElementById('pnames');
+  if(!dl){ dl=document.createElement('datalist'); dl.id='pnames'; document.body.appendChild(dl); }
+  dl.innerHTML=productNames.slice(0,1500).map(p=>`<option value="${esc(p)}">`).join('');
+}
+
+// ====================== INIT ======================
+// 從書籤網址 #g=<pricing>&b=<backend> 帶入設定 → 存 localStorage，再把 hash 清掉（不留在網址列）
+function readHashConfig(){
+  var h=(location.hash||'').replace(/^#/,''); if(!h) return;
+  try{
+    var m=new URLSearchParams(h); var g=m.get('g'), b=m.get('b');
+    if(g) localStorage.setItem(LS_GAS, g);
+    if(b) localStorage.setItem(LS_BACKEND, b);
+    if(g||b){ try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){ location.hash=''; } }
+  }catch(e){}
+}
+function init(){
+  readHashConfig();
+  load();
+  const nd=document.getElementById('nb-date'); if(nd) nd.value=todayStr();
+  fillDatalist();
+  renderBatchList();
+  renderRates();
+  if(productNames.length){ setSync('ok','已載入 '+productNames.length+' 品（本機）'); }
+  loadFromCloud();       // 從雲端載入批次（多人共用、會計可讀）
+  syncFromCloud(false);  // 背景同步費率/商品
+}
+init();
+</script>
+</body>
+</html>
