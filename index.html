@@ -15,7 +15,7 @@
 *{box-sizing:border-box;}
 body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Noto Sans TC",sans-serif;
   background:var(--bg);color:var(--ink);font-size:14px;line-height:1.5;-webkit-text-size-adjust:100%;}
-.wrap{max-width:1100px;margin:0 auto;padding:0 14px 96px;}
+.wrap{max-width:1720px;margin:0 auto;padding:0 14px 96px;}
 header{position:sticky;top:0;z-index:30;background:var(--bg);padding:12px 0 8px;border-bottom:1px solid var(--line);}
 .h-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
 .logo{font-size:17px;font-weight:600;}
@@ -72,10 +72,10 @@ tr.tr-charge td:first-child{box-shadow:inset 3px 0 0 var(--danger);}
 .batch-card .b-main{flex:1;min-width:0;}
 .batch-card .b-title{font-weight:600;font-size:14px;}
 .tbl-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:10px;}
-table.items{width:100%;border-collapse:collapse;font-size:13px;min-width:1050px;}
-table.items th{text-align:left;font-weight:500;padding:8px 8px;white-space:nowrap;font-size:12px;}
+table.items{width:100%;border-collapse:collapse;font-size:13px;min-width:1200px;}
+table.items th{text-align:left;font-weight:500;padding:7px 5px;white-space:nowrap;font-size:12px;}
 table.items th small{display:block;font-weight:400;font-size:10px;color:var(--hint);margin-top:1px;}
-table.items td{padding:5px 8px;border-top:1px solid var(--line);vertical-align:middle;}
+table.items td{padding:4px 5px;border-top:1px solid var(--line);vertical-align:middle;}
 table.items th.t-intake{background:var(--intake);color:#444441;}
 table.items th.t-weigh{background:var(--weigh);color:#0F6E56;}
 table.items th.t-calc{background:var(--calc);color:#3C3489;}
@@ -83,10 +83,10 @@ table.items th.t-fin{background:var(--fin);color:#854F0B;}
 table.items td input,table.items td select{height:30px;font-size:13px;padding:0 6px;}
 .num{text-align:right;font-variant-numeric:tabular-nums;}
 td.num input{text-align:right;}
-table.items td.w-name{min-width:210px;}
+table.items td.w-name{min-width:158px;}
 table.items td.w-name input{width:100%;}
-table.items td input.w-s,table.items td select.w-s{width:72px;}
-table.items td input.w-xs{width:64px;}
+table.items td input.w-s,table.items td select.w-s{width:64px;}
+table.items td input.w-xs{width:46px;}
 table.items td input[type=number]::-webkit-inner-spin-button,
 table.items td input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;}
 table.items td input[type=number]{-moz-appearance:textfield;}
@@ -260,7 +260,7 @@ function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
 
 // ---- 修改軌跡（追責每一次改動）----
 let auditBuf=[];
-const FIELD_ZH={product:'品名',spec:'款式',customer:'客人',friend:'親友',qty:'數量',code:'包裹4碼',status:'狀態',est:'預估每件重',actual:'實秤總重',type:'類型',priceRate:'定價運費率',label:'日期',line:'線別',billed:'帳單計費重(g)',freight:'國際運費',tariff:'關稅',manualCharge:'補寄補款',transferred:'轉單'};
+const FIELD_ZH={product:'品名',spec:'款式',customer:'客人',friend:'親友',qty:'數量',code:'包裹4碼',status:'狀態',est:'預估每件重',actual:'實秤總重',type:'類型',priceRate:'定價運費率',label:'日期',line:'線別',billed:'帳單計費重(g)',freight:'國際運費',tariff:'關稅',manualCharge:'補寄補款',transferred:'轉單',note:'備註'};
 const STATUS_ZH={ok:'已確認',waiting:'等待到貨',unknown:'未知'};
 const TYPE_ZH={regular:'代購',forward:'代運',reship:'補寄'};
 function fieldZh(f){ return FIELD_ZH[f]||f; }
@@ -286,7 +286,7 @@ function buildCloudPayload(b){
     detail.push({
       _key:b.id+'_'+it.id, batchId:b.id, 批次ID:b.id, 線別:L.label, 批次日期:b.label,
       商品名:it.product||'', 款式:it.spec||'', 客人:it.customer||'', 親友:it.friend?'是':'',
-      類型:TYPE_ZH[it.type]||'代購', 數量:it.qty, 包裹4碼:it.code||'', 狀態:STATUS_ZH[it.status]||it.status, 轉單:it.transferred?'是':'',
+      類型:TYPE_ZH[it.type]||'代購', 數量:it.qty, 包裹4碼:it.code||'', 狀態:STATUS_ZH[it.status]||it.status, 轉單:it.transferred?'是':'', 備註:it.note||'',
       預估每件重g:it.est||'', 預估總重g:ok?((it.est*it.qty)||''):'', 定價運費率:it.priceRate||'',
       實秤總重g:it.actual||'', 最終計重g:ok?c.final:'', 單件最終計重g:(ok&&it.qty>1&&c.final)?Math.round(c.final/it.qty):(ok?c.final:''),
       原幣別:L.cur, '分攤運費(原幣)':ok?c.allocFreight:'', '分攤關稅(TWD)':ok?c.allocTariff:'',
@@ -297,7 +297,7 @@ function buildCloudPayload(b){
     });
     if(ok && c.charge>0) ar.push({ _key:b.id+'_'+it.id, batchId:b.id, 線別:L.label, 批次日期:b.label,
       客人:it.customer||'', 親友:it.friend?'是':'', 商品名:it.product||'', 款式:it.spec||'', 數量:it.qty,
-      類型:TYPE_ZH[it.type]||'代購', 收款性質:isFwd?'代運費':(isRe?'補寄補款':'超重補款'), '應收金額(TWD)':c.charge, 認列狀態:'待收' });
+      類型:TYPE_ZH[it.type]||'代購', 收款性質:isFwd?'代運費':(isRe?'補寄補款':'超重補款'), '應收金額(TWD)':c.charge, 備註:it.note||'', 認列狀態:'待收' });
   });
   const summary={ batchId:b.id, 線別:L.label, 批次日期:b.label,
     帳單計費總重KG:b.billed?b.billed/1000:'', 實秤合計g:sum, 件數:qtySum, 品項筆數:b.items.length,
@@ -434,7 +434,7 @@ function curBatch(){ return batches.find(b=>b.id===currentBatchId); }
 function addItem(){
   const b=curBatch(); if(!b) return;
   b.items.push({ id:uid(), product:'', spec:'', type:'regular', customer:'', friend:false, qty:1, code:'',
-    status:'ok', est:0, priceRate:0, actual:0, manualCharge:0, transferred:false });
+    status:'ok', est:0, priceRate:0, actual:0, manualCharge:0, transferred:false, note:'' });
   logChange(b,'(新列)','新增商品','','','新增一列');
   save(); renderBatchDetail();
 }
@@ -526,7 +526,7 @@ function renderBatchDetail(){
           onchange="updItem('${it.id}','product',this.value)">
         ${it._linked?'<span class="tag">帶入定價</span>':''}
       </td>
-      <td><input type="text" class="w-s" style="width:92px" value="${esc(it.spec||'')}" placeholder="款/色/尺寸"
+      <td><input type="text" class="w-s" style="width:76px" value="${esc(it.spec||'')}" placeholder="款/色/尺寸"
         onchange="updItem('${it.id}','spec',this.value)"></td>
       <td><select class="w-s" onchange="updItem('${it.id}','type',this.value)">
         <option value="regular"${it.type==='regular'?' selected':''}>代購</option>
@@ -539,9 +539,9 @@ function renderBatchDetail(){
         onchange="updItem('${it.id}','friend',this.checked)" title="親友免稅金流"></td>
       <td class="num"><input type="number" class="w-xs num" value="${it.qty}" min="1"
         onchange="updItem('${it.id}','qty',this.value)"></td>
-      <td><input type="text" class="w-s" value="${esc(it.code)}" placeholder="4碼"
+      <td><input type="text" class="w-s" style="width:52px" value="${esc(it.code)}" placeholder="4碼"
         onchange="updItem('${it.id}','code',this.value)"></td>
-      <td><select class="w-s" onchange="updItem('${it.id}','status',this.value)">
+      <td><select class="w-s" style="width:84px" onchange="updItem('${it.id}','status',this.value)">
         <option value="ok"${it.status==='ok'?' selected':''}>已確認</option>
         <option value="waiting"${it.status==='waiting'?' selected':''}>等待到貨</option>
         <option value="unknown"${it.status==='unknown'?' selected':''}>未知</option>
@@ -555,6 +555,8 @@ function renderBatchDetail(){
       <td class="num">${it.type==='reship'?(notOk?'—':`<input type="number" class="w-s num" value="${it.manualCharge||''}" placeholder="視狀況" onchange="updItem('${it.id}','manualCharge',this.value)">`):(notOk?'—':(c.charge>0?'NT$'+fmt(c.charge):(noEst?'—':'0')))}</td>
       <td class="num">${notOk?'—':L.sym+fmt(c.allocFreight)}</td>
       <td class="num">${b.line==='japan'?'<span class="hint">—</span>':(notOk?'—':'NT$'+fmt(c.allocTariff))}</td>
+      <td><input type="text" style="width:104px" value="${esc(it.note||'')}" placeholder="提醒/備註"
+        onchange="updItem('${it.id}','note',this.value)"></td>
       <td><span class="del-x" onclick="delItem('${it.id}')" title="刪除">×</span></td>
     </tr>`;
   }).join('');
@@ -622,9 +624,10 @@ function renderBatchDetail(){
         <th class="t-fin num">補款/代運</th>
         <th class="t-fin num">分攤運費</th>
         <th class="t-fin num">分攤關稅</th>
+        <th class="t-intake">備註</th>
         <th class="t-fin"></th>
       </tr></thead>
-      <tbody>${rows||'<tr><td colspan="17" class="empty">還沒有商品，點「＋ 加一筆」開始登記</td></tr>'}</tbody>
+      <tbody>${rows||'<tr><td colspan="18" class="empty">還沒有商品，點「＋ 加一筆」開始登記</td></tr>'}</tbody>
     </table>
     </div>
     <div class="totals">
