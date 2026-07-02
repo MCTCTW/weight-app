@@ -58,6 +58,7 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--a
 .pill.china_normal,.pill.china_special{background:#FAEEDA;color:#854F0B;}
 .pill.japan{background:#E6F1FB;color:#0C447C;}
 .pill.unknown{background:var(--warn-bg);color:var(--warn);}
+.pill.waiting{background:#E6F1FB;color:#0C447C;}
 .pill.forward{background:#E1F5EE;color:#0F6E56;}
 .pill.friend{background:#EEEDFE;color:#3C3489;}
 .muted{color:var(--muted);}
@@ -67,7 +68,7 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--a
 .batch-card .b-main{flex:1;min-width:0;}
 .batch-card .b-title{font-weight:600;font-size:14px;}
 .tbl-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:10px;}
-table.items{width:100%;border-collapse:collapse;font-size:13px;min-width:920px;}
+table.items{width:100%;border-collapse:collapse;font-size:13px;min-width:1010px;}
 table.items th{text-align:left;font-weight:500;padding:8px 8px;white-space:nowrap;font-size:12px;}
 table.items th small{display:block;font-weight:400;font-size:10px;color:var(--hint);margin-top:1px;}
 table.items td{padding:5px 8px;border-top:1px solid var(--line);vertical-align:middle;}
@@ -175,6 +176,10 @@ table.items td input[type=number]{-moz-appearance:textfield;}
     </div>
     <div class="hint" id="backend-hint">批次每次變動會即時存到這張雲端表（去重更新，不會重複列）。</div>
     <div class="s-row" style="margin-top:10px;">
+      <button class="btn sm" onclick="copyShareLink()">📋 複製同事用設定連結</button>
+      <span class="hint">貼給同事開一次即自動設定（連結含後端網址，僅限工作室內部傳）</span>
+    </div>
+    <div class="s-row" style="margin-top:10px;">
       <label class="fl">你的名字</label>
       <input type="text" id="set-user" placeholder="用於修改軌跡（追責每一次改動）">
       <button class="btn sm" onclick="saveUser()">儲存</button>
@@ -251,7 +256,8 @@ function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
 
 // ---- 修改軌跡（追責每一次改動）----
 let auditBuf=[];
-const FIELD_ZH={product:'品名',customer:'客人',friend:'親友',qty:'數量',code:'包裹4碼',status:'狀態',est:'預估每件重',actual:'實秤總重',type:'類型',priceRate:'定價運費率',label:'日期',line:'線別',billed:'帳單計費重(g)',freight:'國際運費',tariff:'關稅'};
+const FIELD_ZH={product:'品名',spec:'款式',customer:'客人',friend:'親友',qty:'數量',code:'包裹4碼',status:'狀態',est:'預估每件重',actual:'實秤總重',type:'類型',priceRate:'定價運費率',label:'日期',line:'線別',billed:'帳單計費重(g)',freight:'國際運費',tariff:'關稅'};
+const STATUS_ZH={ok:'已確認',waiting:'等待到貨',unknown:'未知'};
 function fieldZh(f){ return FIELD_ZH[f]||f; }
 function whoami(){ return localStorage.getItem('weight_app_user')||'(未署名)'; }
 function ensureUser(){ if(!localStorage.getItem('weight_app_user')){ const nm=prompt('請輸入你的名字（會記在修改軌跡，用來追責每一次改動）'); if(nm&&nm.trim()) localStorage.setItem('weight_app_user', nm.trim()); } }
@@ -274,8 +280,8 @@ function buildCloudPayload(b){
     if(ok){ sFreight+=c.allocFreight; sTariff+=c.allocTariff; sFinal+=c.final; qtySum+=it.qty; if(isFwd) sForward+=c.charge; else sCharge+=c.charge; }
     detail.push({
       _key:b.id+'_'+it.id, batchId:b.id, 批次ID:b.id, 線別:L.label, 批次日期:b.label,
-      商品名:it.product||'', 客人:it.customer||'', 親友:it.friend?'是':'',
-      類型:isFwd?'代運':'代購', 數量:it.qty, 包裹4碼:it.code||'', 狀態:ok?'已確認':'未確認',
+      商品名:it.product||'', 款式:it.spec||'', 客人:it.customer||'', 親友:it.friend?'是':'',
+      類型:isFwd?'代運':'代購', 數量:it.qty, 包裹4碼:it.code||'', 狀態:STATUS_ZH[it.status]||it.status,
       預估每件重g:it.est||'', 預估總重g:ok?((it.est*it.qty)||''):'', 定價運費率:it.priceRate||'',
       實秤總重g:it.actual||'', 最終計重g:ok?c.final:'', 單件最終計重g:(ok&&it.qty>1&&c.final)?Math.round(c.final/it.qty):(ok?c.final:''),
       原幣別:L.cur, '分攤運費(原幣)':ok?c.allocFreight:'', '分攤關稅(TWD)':ok?c.allocTariff:'',
@@ -284,7 +290,7 @@ function buildCloudPayload(b){
       收款性質:isFwd?'代運費':(c.charge>0?'超重補款':'')
     });
     if(ok && c.charge>0) ar.push({ _key:b.id+'_'+it.id, batchId:b.id, 線別:L.label, 批次日期:b.label,
-      客人:it.customer||'', 親友:it.friend?'是':'', 商品名:it.product||'', 數量:it.qty,
+      客人:it.customer||'', 親友:it.friend?'是':'', 商品名:it.product||'', 款式:it.spec||'', 數量:it.qty,
       類型:isFwd?'代運':'代購', 收款性質:isFwd?'代運費':'超重補款', '應收金額(TWD)':c.charge, 認列狀態:'待收' });
   });
   const summary={ batchId:b.id, 線別:L.label, 批次日期:b.label,
@@ -338,6 +344,14 @@ async function loadFromCloud(){
   }catch(e){ setCloud('err','離線·用本機'); }
 }
 function saveBackendUrl(){ const v=(document.getElementById('set-backend').value||'').trim(); localStorage.setItem(LS_BACKEND,v); loadFromCloud(); }
+function copyShareLink(){
+  const g=localStorage.getItem(LS_GAS)||'', b=localStorage.getItem(LS_BACKEND)||'';
+  if(!b){ alert('這台還沒設定後端網址，先到上方貼上後端網址'); return; }
+  const url=location.origin+location.pathname+'#g='+g+'&b='+b;
+  const done=()=>alert('已複製！貼給同事，開啟一次即自動設定（含後端網址，僅內部傳）');
+  if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done,()=>prompt('自動複製失敗，請手動複製：',url));
+  else prompt('請手動複製：',url);
+}
 
 // ====================== TABS ======================
 function switchTab(tab, btn){
@@ -379,11 +393,12 @@ function renderBatchList(){
     const L=LINES[b.line]||{label:b.line};
     const okCnt=b.items.filter(i=>i.status==='ok').length;
     const unk=b.items.filter(i=>i.status==='unknown').length;
+    const wait=b.items.filter(i=>i.status==='waiting').length;
     return `<div class="card batch-card" onclick="openBatch('${b.id}')">
       <span class="pill ${b.line}">${esc(L.label)}</span>
       <div class="b-main">
         <div class="b-title">${esc(b.label)}</div>
-        <div class="hint">${b.items.length} 筆商品${unk?'（'+unk+' 筆未確認）':''}　·　帳單計費 ${b.billed?fmt(b.billed)+' g':'未填'}</div>
+        <div class="hint">${b.items.length} 筆商品${wait?'（'+wait+' 筆等待到貨）':''}${unk?'（'+unk+' 筆未確認）':''}　·　帳單計費 ${b.billed?fmt(b.billed)+' g':'未填'}</div>
       </div>
       <span class="hint">開啟 ›</span>
     </div>`;
@@ -410,7 +425,7 @@ function curBatch(){ return batches.find(b=>b.id===currentBatchId); }
 
 function addItem(){
   const b=curBatch(); if(!b) return;
-  b.items.push({ id:uid(), product:'', type:'regular', customer:'', friend:false, qty:1, code:'',
+  b.items.push({ id:uid(), product:'', spec:'', type:'regular', customer:'', friend:false, qty:1, code:'',
     status:'ok', est:0, priceRate:0, actual:0 });
   logChange(b,'(新列)','新增商品','','','新增一列');
   save(); renderBatchDetail();
@@ -430,7 +445,10 @@ function updItem(iid, field, val){
   }
   else { it[field]=val; }
   const newV = it[field];
-  if(String(oldV==null?'':oldV)!==String(newV==null?'':newV)) logChange(b, it.product||'(未命名)', '改商品', fieldZh(field), oldV, newV);
+  if(String(oldV==null?'':oldV)!==String(newV==null?'':newV)){
+    const tr=v=> field==='status'?(STATUS_ZH[v]||v):v;
+    logChange(b, it.product||'(未命名)', '改商品', fieldZh(field), tr(oldV), tr(newV));
+  }
   save(); renderBatchDetail();
 }
 function updBatch(field,val){ const b=curBatch(); const oldV=b[field]; b[field]=n(val); if(String(oldV||'')!==String(b[field]||'')) logChange(b,'(批次)','改批次',fieldZh(field),oldV,b[field]); save(); renderBatchDetail(); }
@@ -483,7 +501,8 @@ function renderBatchDetail(){
   const rows=b.items.map(it=>{
     const c=computeItem(b,it);
     tFinal+=c.final; tFreight+=c.allocFreight; tTariff+=c.allocTariff; tCharge+=c.charge;
-    const unknown = it.status==='unknown';
+    const notOk = it.status!=='ok';
+    const stPill = it.status==='waiting'?'<span class="pill waiting">等待到貨</span>':'<span class="pill unknown">未確認</span>';
     const overCell = it.type==='forward' ? '<span class="hint">—</span>'
       : (c.over>0?`<span style="color:var(--danger)">+${c.over}</span>`:(c.over<0?`<span class="hint">${c.over}</span>`:'0'));
     return `<tr>
@@ -492,6 +511,8 @@ function renderBatchDetail(){
           onchange="updItem('${it.id}','product',this.value)">
         ${it._linked?'<span class="tag">帶入定價</span>':''}
       </td>
+      <td><input type="text" class="w-s" style="width:92px" value="${esc(it.spec||'')}" placeholder="款/色/尺寸"
+        onchange="updItem('${it.id}','spec',this.value)"></td>
       <td><select class="w-s" onchange="updItem('${it.id}','type',this.value)">
         <option value="regular"${it.type==='regular'?' selected':''}>代購</option>
         <option value="forward"${it.type==='forward'?' selected':''}>代運</option>
@@ -506,15 +527,16 @@ function renderBatchDetail(){
         onchange="updItem('${it.id}','code',this.value)"></td>
       <td><select class="w-s" onchange="updItem('${it.id}','status',this.value)">
         <option value="ok"${it.status==='ok'?' selected':''}>已確認</option>
-        <option value="unknown"${unknown?' selected':''}>未知</option>
+        <option value="waiting"${it.status==='waiting'?' selected':''}>等待到貨</option>
+        <option value="unknown"${it.status==='unknown'?' selected':''}>未知</option>
       </select></td>
       <td class="num">${it.type==='forward'?'<span class="hint">—</span>':`<input type="number" class="w-s num" value="${it.est||''}" placeholder="每件g" onchange="updItem('${it.id}','est',this.value)">`}</td>
-      <td class="num">${unknown?'<span class="pill unknown">未確認</span>':`<input type="number" class="w-s num" value="${it.actual||''}" placeholder="總g" onchange="updItem('${it.id}','actual',this.value)">`}</td>
-      <td class="num">${unknown?'—':fmt(c.final)+(it.qty>1&&c.final?`<div class="hint" style="font-size:10px">每件 ${fmt(c.final/it.qty)}</div>`:'')}</td>
-      <td class="num">${unknown?'—':overCell}</td>
-      <td class="num">${unknown?'—':(c.charge>0?'NT$'+fmt(c.charge):(it.type==='forward'?'—':'0'))}</td>
-      <td class="num">${unknown?'—':L.sym+fmt(c.allocFreight)}</td>
-      <td class="num">${b.line==='japan'?'<span class="hint">—</span>':(unknown?'—':'NT$'+fmt(c.allocTariff))}</td>
+      <td class="num">${notOk?stPill:`<input type="number" class="w-s num" value="${it.actual||''}" placeholder="總g" onchange="updItem('${it.id}','actual',this.value)">`}</td>
+      <td class="num">${notOk?'—':fmt(c.final)+(it.qty>1&&c.final?`<div class="hint" style="font-size:10px">每件 ${fmt(c.final/it.qty)}</div>`:'')}</td>
+      <td class="num">${notOk?'—':overCell}</td>
+      <td class="num">${notOk?'—':(c.charge>0?'NT$'+fmt(c.charge):(it.type==='forward'?'—':'0'))}</td>
+      <td class="num">${notOk?'—':L.sym+fmt(c.allocFreight)}</td>
+      <td class="num">${b.line==='japan'?'<span class="hint">—</span>':(notOk?'—':'NT$'+fmt(c.allocTariff))}</td>
       <td><span class="del-x" onclick="delItem('${it.id}')" title="刪除">×</span></td>
     </tr>`;
   }).join('');
@@ -567,6 +589,7 @@ function renderBatchDetail(){
     <table class="items">
       <thead><tr>
         <th class="t-intake">商品名</th>
+        <th class="t-intake">款式<small>顏色/尺寸</small></th>
         <th class="t-intake">類型</th>
         <th class="t-intake">客人</th>
         <th class="t-intake">親友</th>
@@ -582,7 +605,7 @@ function renderBatchDetail(){
         <th class="t-fin num">分攤關稅</th>
         <th class="t-fin"></th>
       </tr></thead>
-      <tbody>${rows||'<tr><td colspan="15" class="empty">還沒有商品，點「＋ 加一筆」開始登記</td></tr>'}</tbody>
+      <tbody>${rows||'<tr><td colspan="16" class="empty">還沒有商品，點「＋ 加一筆」開始登記</td></tr>'}</tbody>
     </table>
     </div>
     <div class="totals">
@@ -686,14 +709,14 @@ function fillDatalist(){
 }
 
 // ====================== INIT ======================
-// 從書籤網址 #g=<pricing>&b=<backend> 帶入設定 → 存 localStorage，再把 hash 清掉（不留在網址列）
+// 從書籤網址 #g=<pricing>&b=<backend> 帶入設定 → 存 localStorage。
+// 🔖 hash 保留在網址列：這樣同事「開啟後才加書籤」也會帶著設定，不會存到空殼網址。
 function readHashConfig(){
   var h=(location.hash||'').replace(/^#/,''); if(!h) return;
   try{
     var m=new URLSearchParams(h); var g=m.get('g'), b=m.get('b');
     if(g) localStorage.setItem(LS_GAS, g);
     if(b) localStorage.setItem(LS_BACKEND, b);
-    if(g||b){ try{ history.replaceState(null,'',location.pathname+location.search); }catch(e){ location.hash=''; } }
   }catch(e){}
 }
 function init(){
