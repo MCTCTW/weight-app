@@ -363,7 +363,9 @@ function saveBackendUrl(){ const v=(document.getElementById('set-backend').value
 function copyShareLink(){
   const g=localStorage.getItem(LS_GAS)||'', b=localStorage.getItem(LS_BACKEND)||'';
   if(!b){ alert('這台還沒設定後端網址，先到上方貼上後端網址'); return; }
-  const url=location.origin+location.pathname+'#g='+g+'&b='+b;
+  const SITE='https://mctctw.github.io/weight-app/';
+  const base=(location.hostname==='localhost'||location.protocol==='file:')?SITE:location.origin+location.pathname;
+  const url=base+'#g='+g+'&b='+b;
   const done=()=>alert('已複製！貼給同事，開啟一次即自動設定（含後端網址，僅內部傳）');
   if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(url).then(done,()=>prompt('自動複製失敗，請手動複製：',url));
   else prompt('請手動複製：',url);
