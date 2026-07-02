@@ -61,6 +61,8 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--a
 .pill.waiting{background:#E6F1FB;color:#0C447C;}
 tr.tr-wait td{background:#F6F5F0;color:var(--hint);}
 tr.tr-wait input,tr.tr-wait select{background:#FBFAF6;color:var(--muted);border-color:var(--line);}
+tr.tr-charge td{background:var(--danger-bg);}
+tr.tr-charge td:first-child{box-shadow:inset 3px 0 0 var(--danger);}
 .pill.forward{background:#E1F5EE;color:#0F6E56;}
 .pill.friend{background:#EEEDFE;color:#3C3489;}
 .muted{color:var(--muted);}
@@ -70,7 +72,7 @@ tr.tr-wait input,tr.tr-wait select{background:#FBFAF6;color:var(--muted);border-
 .batch-card .b-main{flex:1;min-width:0;}
 .batch-card .b-title{font-weight:600;font-size:14px;}
 .tbl-scroll{overflow-x:auto;border:1px solid var(--line);border-radius:10px;}
-table.items{width:100%;border-collapse:collapse;font-size:13px;min-width:1010px;}
+table.items{width:100%;border-collapse:collapse;font-size:13px;min-width:1050px;}
 table.items th{text-align:left;font-weight:500;padding:8px 8px;white-space:nowrap;font-size:12px;}
 table.items th small{display:block;font-weight:400;font-size:10px;color:var(--hint);margin-top:1px;}
 table.items td{padding:5px 8px;border-top:1px solid var(--line);vertical-align:middle;}
@@ -258,7 +260,7 @@ function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
 
 // ---- 修改軌跡（追責每一次改動）----
 let auditBuf=[];
-const FIELD_ZH={product:'品名',spec:'款式',customer:'客人',friend:'親友',qty:'數量',code:'包裹4碼',status:'狀態',est:'預估每件重',actual:'實秤總重',type:'類型',priceRate:'定價運費率',label:'日期',line:'線別',billed:'帳單計費重(g)',freight:'國際運費',tariff:'關稅'};
+const FIELD_ZH={product:'品名',spec:'款式',customer:'客人',friend:'親友',qty:'數量',code:'包裹4碼',status:'狀態',est:'預估每件重',actual:'實秤總重',type:'類型',priceRate:'定價運費率',label:'日期',line:'線別',billed:'帳單計費重(g)',freight:'國際運費',tariff:'關稅',manualCharge:'補寄補款',transferred:'轉單'};
 const STATUS_ZH={ok:'已確認',waiting:'等待到貨',unknown:'未知'};
 const TYPE_ZH={regular:'代購',forward:'代運',reship:'補寄'};
 function fieldZh(f){ return FIELD_ZH[f]||f; }
@@ -284,23 +286,25 @@ function buildCloudPayload(b){
     detail.push({
       _key:b.id+'_'+it.id, batchId:b.id, 批次ID:b.id, 線別:L.label, 批次日期:b.label,
       商品名:it.product||'', 款式:it.spec||'', 客人:it.customer||'', 親友:it.friend?'是':'',
-      類型:TYPE_ZH[it.type]||'代購', 數量:it.qty, 包裹4碼:it.code||'', 狀態:STATUS_ZH[it.status]||it.status,
+      類型:TYPE_ZH[it.type]||'代購', 數量:it.qty, 包裹4碼:it.code||'', 狀態:STATUS_ZH[it.status]||it.status, 轉單:it.transferred?'是':'',
       預估每件重g:it.est||'', 預估總重g:ok?((it.est*it.qty)||''):'', 定價運費率:it.priceRate||'',
       實秤總重g:it.actual||'', 最終計重g:ok?c.final:'', 單件最終計重g:(ok&&it.qty>1&&c.final)?Math.round(c.final/it.qty):(ok?c.final:''),
       原幣別:L.cur, '分攤運費(原幣)':ok?c.allocFreight:'', '分攤關稅(TWD)':ok?c.allocTariff:'',
       成本性質:isFwd?'代收代付':(isRe?'補寄(工作室吸收)':'進貨成本'),
       '超重補款(TWD)':(isFwd||isRe)?'':(ok?c.charge:''), '代運費(TWD)':isFwd?(ok?c.charge:''):'',
-      收款性質:isFwd?'代運費':(isRe?'':(c.charge>0?'超重補款':''))
+      '補寄補款(TWD)':isRe?(ok?c.charge:''):'',
+      收款性質:isFwd?'代運費':(isRe?(c.charge>0?'補寄補款':''):(c.charge>0?'超重補款':''))
     });
     if(ok && c.charge>0) ar.push({ _key:b.id+'_'+it.id, batchId:b.id, 線別:L.label, 批次日期:b.label,
       客人:it.customer||'', 親友:it.friend?'是':'', 商品名:it.product||'', 款式:it.spec||'', 數量:it.qty,
-      類型:TYPE_ZH[it.type]||'代購', 收款性質:isFwd?'代運費':'超重補款', '應收金額(TWD)':c.charge, 認列狀態:'待收' });
+      類型:TYPE_ZH[it.type]||'代購', 收款性質:isFwd?'代運費':(isRe?'補寄補款':'超重補款'), '應收金額(TWD)':c.charge, 認列狀態:'待收' });
   });
   const summary={ batchId:b.id, 線別:L.label, 批次日期:b.label,
     帳單計費總重KG:b.billed?b.billed/1000:'', 實秤合計g:sum, 件數:qtySum, 品項筆數:b.items.length,
     '國際運費(原幣)':b.freight||'', 原幣別:L.cur, '關稅(TWD)':b.line==='japan'?0:(b.tariff||''),
     最終計重合計g:sFinal, '分攤運費原幣合計':sFreight, '分攤關稅TWD合計':sTariff,
-    '應收補款TWD合計':sCharge, '代運費TWD合計':sForward };
+    '應收補款TWD合計':sCharge, '代運費TWD合計':sForward,
+    未轉單筆數:b.items.filter(i=>!i.transferred).length };
   return { batchId:b.id, json:b, detail, ar, summary };
 }
 
@@ -397,11 +401,12 @@ function renderBatchList(){
     const okCnt=b.items.filter(i=>i.status==='ok').length;
     const unk=b.items.filter(i=>i.status==='unknown').length;
     const wait=b.items.filter(i=>i.status==='waiting').length;
+    const untrans=b.items.filter(i=>!i.transferred).length;
     return `<div class="card batch-card" onclick="openBatch('${b.id}')">
       <span class="pill ${b.line}">${esc(L.label)}</span>
       <div class="b-main">
         <div class="b-title">${esc(b.label)}</div>
-        <div class="hint">${b.items.length} 筆商品${wait?'（'+wait+' 筆等待到貨）':''}${unk?'（'+unk+' 筆未確認）':''}　·　帳單計費 ${b.billed?fmt(b.billed)+' g':'未填'}</div>
+        <div class="hint">${b.items.length} 筆商品${untrans?'（<b style="color:var(--warn)">'+untrans+' 筆未轉單</b>）':''}${wait?'（'+wait+' 筆等待到貨）':''}${unk?'（'+unk+' 筆未確認）':''}　·　帳單計費 ${b.billed?fmt(b.billed)+' g':'未填'}</div>
       </div>
       <span class="hint">開啟 ›</span>
     </div>`;
@@ -429,7 +434,7 @@ function curBatch(){ return batches.find(b=>b.id===currentBatchId); }
 function addItem(){
   const b=curBatch(); if(!b) return;
   b.items.push({ id:uid(), product:'', spec:'', type:'regular', customer:'', friend:false, qty:1, code:'',
-    status:'ok', est:0, priceRate:0, actual:0 });
+    status:'ok', est:0, priceRate:0, actual:0, manualCharge:0, transferred:false });
   logChange(b,'(新列)','新增商品','','','新增一列');
   save(); renderBatchDetail();
 }
@@ -439,7 +444,8 @@ function updItem(iid, field, val){
   const b=curBatch(); const it=b.items.find(i=>i.id===iid); if(!it) return;
   const oldV = it[field];
   if(field==='friend'){ it.friend=val; }
-  else if(['qty','est','actual'].includes(field)){ it[field]=n(val); }
+  else if(field==='transferred'){ it.transferred=val; }
+  else if(['qty','est','actual','manualCharge'].includes(field)){ it[field]=n(val); }
   else if(field==='product'){
     it.product=val;
     const hit=priceIndex[val.trim().toLowerCase()];
@@ -484,9 +490,9 @@ function computeItem(b, it){
     r.charge = it.friend ? Math.round(base) : Math.ceil(base/feeFactor());
     r.chargeLabel='代運費';
   } else if(it.type==='reship'){
-    // 補寄：佔重量→照樣分攤運費/關稅（工作室吸收），不向客人收費
-    r.charge = 0;
-    r.chargeLabel='補寄';
+    // 補寄：佔重量→照樣分攤運費/關稅；補款「視狀況」手動填（填多少收多少，0=不收）
+    r.charge = n(it.manualCharge);
+    r.chargeLabel='補寄補款';
   } else {
     // 代購補款：實際落地成本(運費+關稅) − 預估已付。費率漲一律計差額；max(0)→超出預估才收，降價自動吸收
     const estTotal = it.est*it.qty;                       // g 預估總重
@@ -513,7 +519,8 @@ function renderBatchDetail(){
     const stPill = it.status==='waiting'?'<span class="pill waiting">等待到貨</span>':'<span class="pill unknown">未確認</span>';
     const overCell = noEst ? '<span class="hint">—</span>'
       : (c.over>0?`<span style="color:var(--danger)">+${c.over}</span>`:(c.over<0?`<span class="hint">${c.over}</span>`:'0'));
-    return `<tr${it.status==='waiting'?' class="tr-wait"':''}>
+    const rowCls = it.status==='waiting' ? 'tr-wait' : (!notOk && c.charge>0 && it.type!=='forward' ? 'tr-charge' : '');
+    return `<tr${rowCls?` class="${rowCls}"`:''}>
       <td class="w-name">
         <input type="text" list="pnames" value="${esc(it.product)}" placeholder="商品名"
           onchange="updItem('${it.id}','product',this.value)">
@@ -539,11 +546,13 @@ function renderBatchDetail(){
         <option value="waiting"${it.status==='waiting'?' selected':''}>等待到貨</option>
         <option value="unknown"${it.status==='unknown'?' selected':''}>未知</option>
       </select></td>
+      <td style="text-align:center"><input type="checkbox" ${it.transferred?'checked':''}
+        onchange="updItem('${it.id}','transferred',this.checked)" title="已轉單"></td>
       <td class="num">${noEst?'<span class="hint">—</span>':`<input type="number" class="w-s num" value="${it.est||''}" placeholder="每件g" onchange="updItem('${it.id}','est',this.value)">`}</td>
       <td class="num">${notOk?stPill:`<input type="number" class="w-s num" value="${it.actual||''}" placeholder="總g" onchange="updItem('${it.id}','actual',this.value)">`}</td>
       <td class="num">${notOk?'—':fmt(c.final)+(it.qty>1&&c.final?`<div class="hint" style="font-size:10px">每件 ${fmt(c.final/it.qty)}</div>`:'')}</td>
       <td class="num">${notOk?'—':overCell}</td>
-      <td class="num">${notOk?'—':(c.charge>0?'NT$'+fmt(c.charge):(noEst?'—':'0'))}</td>
+      <td class="num">${it.type==='reship'?(notOk?'—':`<input type="number" class="w-s num" value="${it.manualCharge||''}" placeholder="視狀況" onchange="updItem('${it.id}','manualCharge',this.value)">`):(notOk?'—':(c.charge>0?'NT$'+fmt(c.charge):(noEst?'—':'0')))}</td>
       <td class="num">${notOk?'—':L.sym+fmt(c.allocFreight)}</td>
       <td class="num">${b.line==='japan'?'<span class="hint">—</span>':(notOk?'—':'NT$'+fmt(c.allocTariff))}</td>
       <td><span class="del-x" onclick="delItem('${it.id}')" title="刪除">×</span></td>
@@ -605,6 +614,7 @@ function renderBatchDetail(){
         <th class="t-intake num">數量</th>
         <th class="t-intake">包裹4碼</th>
         <th class="t-intake">狀態</th>
+        <th class="t-intake">轉單</th>
         <th class="t-calc num">預估重<small>每件</small></th>
         <th class="t-weigh num">實秤含箱<small>全部數量總重</small></th>
         <th class="t-calc num">最終計重<small>全部數量</small></th>
@@ -614,7 +624,7 @@ function renderBatchDetail(){
         <th class="t-fin num">分攤關稅</th>
         <th class="t-fin"></th>
       </tr></thead>
-      <tbody>${rows||'<tr><td colspan="16" class="empty">還沒有商品，點「＋ 加一筆」開始登記</td></tr>'}</tbody>
+      <tbody>${rows||'<tr><td colspan="17" class="empty">還沒有商品，點「＋ 加一筆」開始登記</td></tr>'}</tbody>
     </table>
     </div>
     <div class="totals">
