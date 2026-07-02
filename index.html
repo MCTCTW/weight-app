@@ -59,8 +59,9 @@ input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--a
 .pill.japan{background:#E6F1FB;color:#0C447C;}
 .pill.unknown{background:var(--warn-bg);color:var(--warn);}
 .pill.waiting{background:#E6F1FB;color:#0C447C;}
-tr.tr-wait td{background:#F6F5F0;color:var(--hint);}
-tr.tr-wait input,tr.tr-wait select{background:#FBFAF6;color:var(--muted);border-color:var(--line);}
+tr.tr-wait td{background:#E9F1FA;color:var(--muted);}
+tr.tr-wait td:first-child{box-shadow:inset 3px 0 0 #378ADD;}
+tr.tr-wait input,tr.tr-wait select,tr.tr-wait textarea{background:#F5F9FD;color:var(--muted);border-color:#CFE0F0;}
 tr.tr-charge td{background:var(--danger-bg);}
 tr.tr-charge td:first-child{box-shadow:inset 3px 0 0 var(--danger);}
 .pill.forward{background:#E1F5EE;color:#0F6E56;}
@@ -90,6 +91,14 @@ table.items td input.w-xs{width:46px;}
 table.items td input[type=number]::-webkit-inner-spin-button,
 table.items td input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;}
 table.items td input[type=number]{-moz-appearance:textfield;}
+table.items td textarea{display:block;width:100%;min-height:30px;font-size:13px;line-height:1.35;padding:5px 6px;
+  border:1px solid var(--line2);border-radius:var(--radius);background:#fff;color:var(--ink);outline:none;resize:none;font-family:inherit;overflow:hidden;}
+table.items td textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg);}
+.ac-list{position:absolute;top:100%;left:0;min-width:240px;z-index:40;background:#fff;border:1px solid var(--line2);
+  border-radius:8px;box-shadow:0 6px 16px rgba(0,0,0,.1);max-height:200px;overflow:auto;display:none;font-size:12px;}
+.ac-list div{padding:6px 9px;cursor:pointer;border-bottom:1px solid var(--line);}
+.ac-list div:last-child{border-bottom:none;}
+.ac-list div:hover{background:#F1EFE8;}
 .legend{display:flex;gap:8px;flex-wrap:wrap;font-size:11px;margin:0 0 10px;}
 .legend span{padding:3px 9px;border-radius:6px;}
 .lg-intake{background:var(--intake);color:#444441;}
@@ -431,6 +440,25 @@ function closeBatch(){
 }
 function curBatch(){ return batches.find(b=>b.id===currentBatchId); }
 
+// ---- 方格自動長高 + 商品名自動補全 ----
+function autoGrow(el){ el.style.height='auto'; el.style.height=el.scrollHeight+'px'; }
+function growAll(){ document.querySelectorAll('#batch-detail-view textarea').forEach(autoGrow); }
+function showAc(ta, iid){
+  const list=ta.parentElement.querySelector('.ac-list'); if(!list) return;
+  const q=ta.value.trim().toLowerCase();
+  if(!q){ list.style.display='none'; return; }
+  const hits=productNames.filter(p=>p.toLowerCase().includes(q)).slice(0,8);
+  if(!hits.length){ list.style.display='none'; return; }
+  list.innerHTML='';
+  hits.forEach(h=>{
+    const d=document.createElement('div'); d.textContent=h;
+    d.onmousedown=e=>{ e.preventDefault(); updItem(iid,'product',h); };
+    list.appendChild(d);
+  });
+  list.style.display='block';
+}
+function hideAc(ta){ setTimeout(()=>{ const l=ta.parentElement&&ta.parentElement.querySelector('.ac-list'); if(l) l.style.display='none'; },150); }
+
 function addItem(){
   const b=curBatch(); if(!b) return;
   b.items.push({ id:uid(), product:'', spec:'', type:'regular', customer:'', friend:false, qty:1, code:'',
@@ -522,25 +550,28 @@ function renderBatchDetail(){
     const rowCls = it.status==='waiting' ? 'tr-wait' : (!notOk && c.charge>0 && it.type!=='forward' ? 'tr-charge' : '');
     return `<tr${rowCls?` class="${rowCls}"`:''}>
       <td class="w-name">
-        <input type="text" list="pnames" value="${esc(it.product)}" placeholder="商品名"
-          onchange="updItem('${it.id}','product',this.value)">
+        <div style="position:relative">
+          <textarea rows="1" placeholder="商品名" oninput="autoGrow(this);showAc(this,'${it.id}')" onfocus="showAc(this,'${it.id}')" onblur="hideAc(this)"
+            onchange="updItem('${it.id}','product',this.value)">${esc(it.product)}</textarea>
+          <div class="ac-list"></div>
+        </div>
         ${it._linked?'<span class="tag">帶入定價</span>':''}
       </td>
-      <td><input type="text" class="w-s" style="width:76px" value="${esc(it.spec||'')}" placeholder="款/色/尺寸"
-        onchange="updItem('${it.id}','spec',this.value)"></td>
+      <td><textarea rows="1" style="width:76px" placeholder="款/色/尺寸" oninput="autoGrow(this)"
+        onchange="updItem('${it.id}','spec',this.value)">${esc(it.spec||'')}</textarea></td>
       <td><select class="w-s" onchange="updItem('${it.id}','type',this.value)">
         <option value="regular"${it.type==='regular'?' selected':''}>代購</option>
         <option value="forward"${it.type==='forward'?' selected':''}>代運</option>
         <option value="reship"${it.type==='reship'?' selected':''}>補寄</option>
       </select></td>
-      <td><input type="text" class="w-s" value="${esc(it.customer)}" placeholder="—"
-        onchange="updItem('${it.id}','customer',this.value)"></td>
+      <td><textarea rows="1" style="width:64px" placeholder="—" oninput="autoGrow(this)"
+        onchange="updItem('${it.id}','customer',this.value)">${esc(it.customer)}</textarea></td>
       <td style="text-align:center"><input type="checkbox" ${it.friend?'checked':''}
         onchange="updItem('${it.id}','friend',this.checked)" title="親友免稅金流"></td>
       <td class="num"><input type="number" class="w-xs num" value="${it.qty}" min="1"
         onchange="updItem('${it.id}','qty',this.value)"></td>
-      <td><input type="text" class="w-s" style="width:52px" value="${esc(it.code)}" placeholder="4碼"
-        onchange="updItem('${it.id}','code',this.value)"></td>
+      <td><textarea rows="1" style="width:56px" placeholder="4碼" oninput="autoGrow(this)"
+        onchange="updItem('${it.id}','code',this.value)">${esc(it.code)}</textarea></td>
       <td><select class="w-s" style="width:84px" onchange="updItem('${it.id}','status',this.value)">
         <option value="ok"${it.status==='ok'?' selected':''}>已確認</option>
         <option value="waiting"${it.status==='waiting'?' selected':''}>等待到貨</option>
@@ -555,8 +586,8 @@ function renderBatchDetail(){
       <td class="num">${it.type==='reship'?(notOk?'—':`<input type="number" class="w-s num" value="${it.manualCharge||''}" placeholder="視狀況" onchange="updItem('${it.id}','manualCharge',this.value)">`):(notOk?'—':(c.charge>0?'NT$'+fmt(c.charge):(noEst?'—':'0')))}</td>
       <td class="num">${notOk?'—':L.sym+fmt(c.allocFreight)}</td>
       <td class="num">${b.line==='japan'?'<span class="hint">—</span>':(notOk?'—':'NT$'+fmt(c.allocTariff))}</td>
-      <td><input type="text" style="width:104px" value="${esc(it.note||'')}" placeholder="提醒/備註"
-        onchange="updItem('${it.id}','note',this.value)"></td>
+      <td><textarea rows="1" style="width:104px" placeholder="提醒/備註" oninput="autoGrow(this)"
+        onchange="updItem('${it.id}','note',this.value)">${esc(it.note||'')}</textarea></td>
       <td><span class="del-x" onclick="delItem('${it.id}')" title="刪除">×</span></td>
     </tr>`;
   }).join('');
@@ -639,6 +670,7 @@ function renderBatchDetail(){
     ${b.billed<=0?'<div class="note warn">尚未填「帳單計費總重」，最終計重與分攤先顯示 0。秤完整批帳單重後填上即自動分攤。</div>':''}
     <div class="note">補款用即時費率：${esc(L.label)} 國際運費 NT$${rates.shipping[b.line]||0}/kg、關稅 NT$${rates.tariff[b.line]||0}/kg、代運 NT$${(rates.forwarding[b.line]||{}).rate||0}/kg。降價多賺自動吸收、不退。勾「親友」免 ${(100-feeFactor()*100).toFixed(1)}% 稅金流。</div>
   </div>`;
+  requestAnimationFrame(growAll);
 }
 
 // ====================== SEARCH ======================
