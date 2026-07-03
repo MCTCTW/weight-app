@@ -95,7 +95,7 @@ table.items td textarea{display:block;width:100%;min-height:30px;font-size:13px;
   border:1px solid var(--line2);border-radius:var(--radius);background:#fff;color:var(--ink);outline:none;resize:none;font-family:inherit;overflow:hidden;}
 table.items td textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg);}
 .ac-list{position:absolute;top:100%;left:0;min-width:240px;z-index:40;background:#fff;border:1px solid var(--line2);
-  border-radius:8px;box-shadow:0 6px 16px rgba(0,0,0,.1);max-height:200px;overflow:auto;display:none;font-size:12px;}
+  border-radius:8px;box-shadow:0 6px 16px rgba(0,0,0,.1);max-height:380px;overflow:auto;display:none;font-size:12px;}
 .ac-list div{padding:6px 9px;cursor:pointer;border-bottom:1px solid var(--line);}
 .ac-list div:last-child{border-bottom:none;}
 .ac-list div:hover{background:#F1EFE8;}
@@ -449,7 +449,7 @@ function showAc(ta, iid){
   const list=ta.parentElement.querySelector('.ac-list'); if(!list) return;
   const q=ta.value.trim().toLowerCase();
   if(!q){ list.style.display='none'; return; }
-  const hits=productNames.filter(p=>p.toLowerCase().includes(q)).slice(0,8);
+  const hits=productNames.filter(p=>p.toLowerCase().includes(q)).slice(0,20);
   if(!hits.length){ list.style.display='none'; return; }
   list.innerHTML='';
   hits.forEach(h=>{
