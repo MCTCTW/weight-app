@@ -496,6 +496,16 @@ function autoBilled(){
   const b=curBatch(); const sum=sumActual(b);
   b.billed = Math.ceil(sum/1000)*1000; save(); renderBatchDetail();
 }
+// 一鍵複製本批商品名清單（打包公告用；只列「已確認」，等待到貨/未知不列）
+function copyProductList(){
+  const b=curBatch(); if(!b) return;
+  const names=b.items.filter(i=>i.status==='ok'&&(i.product||'').trim()).map(i=>i.product.trim());
+  if(!names.length){ alert('此批還沒有「已確認」的商品'); return; }
+  const text=names.join('\n');
+  const done=()=>alert('已複製 '+names.length+' 項商品名，直接貼到公告即可');
+  if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(text).then(done,()=>prompt('自動複製失敗，請手動複製：',text));
+  else prompt('請手動複製：',text);
+}
 
 function sumActual(b){ return b.items.filter(i=>i.status==='ok' && i.actual>0).reduce((s,i)=>s+i.actual,0); }
 
@@ -630,7 +640,8 @@ function renderBatchDetail(){
   <div class="card">
     <div class="flex" style="margin-bottom:8px;">
       <h2 style="margin:0;">商品明細</h2>
-      <button class="btn sm right" onclick="addItem()">＋ 加一筆</button>
+      <button class="btn sm right" onclick="copyProductList()">📋 複製商品清單</button>
+      <button class="btn sm" onclick="addItem()">＋ 加一筆</button>
     </div>
     <div class="legend">
       <span class="lg-intake">到倉登記</span>
