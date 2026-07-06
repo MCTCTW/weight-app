@@ -146,7 +146,7 @@ table.items td textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px va
       <h2>新增批次 <span class="sub">一線一批，到倉就開</span></h2>
       <div class="grid g-batch">
         <div>
-          <label class="fl">線別</label>
+          <label class="fl">運送方式</label>
           <select id="nb-line">
             <option value="korea">韓國</option>
             <option value="china_normal">中國普貨</option>
@@ -269,7 +269,7 @@ function sleep(ms){ return new Promise(r=>setTimeout(r,ms)); }
 
 // ---- 修改軌跡（追責每一次改動）----
 let auditBuf=[];
-const FIELD_ZH={product:'品名',spec:'款式',customer:'客人',friend:'親友',qty:'數量',code:'包裹4碼',status:'狀態',est:'預估每件重',actual:'實秤總重',type:'類型',priceRate:'定價運費率',label:'日期',line:'線別',billed:'帳單計費重(g)',freight:'國際運費',tariff:'關稅',manualCharge:'補寄補款',transferred:'轉單',note:'備註'};
+const FIELD_ZH={product:'品名',spec:'款式',customer:'客人',friend:'親友',qty:'數量',code:'包裹4碼',status:'狀態',est:'預估每件重',actual:'實秤總重',type:'類型',priceRate:'定價運費率',label:'日期',line:'運送方式',billed:'帳單計費重(g)',freight:'國際運費',tariff:'關稅',manualCharge:'補寄補款',transferred:'轉單',note:'備註'};
 const STATUS_ZH={ok:'已確認',waiting:'等待到貨',unknown:'未知'};
 const TYPE_ZH={regular:'代購',forward:'代運',reship:'補寄'};
 function fieldZh(f){ return FIELD_ZH[f]||f; }
