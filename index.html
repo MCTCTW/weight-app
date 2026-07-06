@@ -123,7 +123,12 @@ table.items td textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px va
 .del-x{color:var(--hint);cursor:pointer;font-size:16px;line-height:1;padding:4px;}
 .del-x:hover{color:var(--danger);}
 .right{margin-left:auto;}
-@media(max-width:640px){.card{padding:13px 13px;}.wrap{padding:0 10px 96px;}}
+@media(max-width:640px){
+  .card{padding:13px 13px;}
+  .wrap{padding:0 10px 96px;}
+  .tbl-scroll{max-height:62vh;overflow:auto;-webkit-overflow-scrolling:touch;}
+  table.items th{position:sticky;top:0;z-index:3;}
+}
 </style>
 </head>
 <body>
@@ -567,6 +572,10 @@ function computeItem(b, it){
 
 function renderBatchDetail(){
   const b=curBatch(); if(!b){ closeBatch(); return; }
+  // 改一格就整頁重建 → 手機會跳回頂端；重建前記住捲動位置、重建後原地還原
+  const _vv=document.getElementById('batch-detail-view');
+  const _osc=_vv?_vv.querySelector('.tbl-scroll'):null;
+  const _keepY=window.scrollY, _keepX=_osc?_osc.scrollLeft:0, _keepT=_osc?_osc.scrollTop:0;
   const L=LINES[b.line]||{label:b.line,sym:'NT$'};
   const lf=ledgerFreight[b.id]||0;
   if(lf>0 && !(b.freight>0)){ const oldV=b.freight; b.freight=lf; logChange(b,'(批次)','自動帶入','國際運費(記帳)',oldV,lf); save(); }
@@ -706,7 +715,10 @@ function renderBatchDetail(){
     ${b.billed<=0?'<div class="note warn">尚未填「帳單計費總重」，最終計重與分攤先顯示 0。秤完整批帳單重後填上即自動分攤。</div>':''}
     <div class="note">補款用即時費率：${esc(L.label)} 國際運費 NT$${rates.shipping[b.line]||0}/kg、關稅 NT$${rates.tariff[b.line]||0}/kg、代運 NT$${(rates.forwarding[b.line]||{}).rate||0}/kg。降價多賺自動吸收、不退。勾「親友」免 ${(100-feeFactor()*100).toFixed(1)}% 稅金流。</div>
   </div>`;
-  requestAnimationFrame(growAll);
+  const _nsc=v.querySelector('.tbl-scroll');
+  if(_nsc){ _nsc.scrollLeft=_keepX; _nsc.scrollTop=_keepT; }
+  window.scrollTo(0,_keepY);
+  requestAnimationFrame(()=>{ growAll(); window.scrollTo(0,_keepY); });
 }
 
 // ====================== SEARCH ======================
