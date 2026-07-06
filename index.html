@@ -468,21 +468,51 @@ function curBatch(){ return batches.find(b=>b.id===currentBatchId); }
 // ---- 方格自動長高 + 商品名自動補全 ----
 function autoGrow(el){ el.style.height='auto'; el.style.height=el.scrollHeight+'px'; }
 function growAll(){ document.querySelectorAll('#batch-detail-view textarea').forEach(autoGrow); }
+// 下拉清單貼在 body 最上層（fixed）：不被表格內部捲動範圍裁切，手機能整片展開到鍵盤上緣
+let acTa=null, acIid=null;
+function acEl(){
+  let el=document.getElementById('ac-global');
+  if(!el){
+    el=document.createElement('div'); el.id='ac-global'; el.className='ac-list';
+    el.style.position='fixed'; el.style.display='none'; el.style.zIndex='1000';
+    document.body.appendChild(el);
+    document.addEventListener('scroll', acReposition, true);   // capture 才接得到 .tbl-scroll 的捲動
+    window.addEventListener('resize', acReposition);
+    if(window.visualViewport) visualViewport.addEventListener('resize', acReposition);  // 鍵盤開合
+  }
+  return el;
+}
+function acReposition(){
+  const el=document.getElementById('ac-global');
+  if(!el||el.style.display==='none') return;
+  if(!acTa||!document.body.contains(acTa)){ el.style.display='none'; return; }
+  const r=acTa.getBoundingClientRect();
+  const vh=window.visualViewport?visualViewport.height:innerHeight;
+  const below=vh-r.bottom-10, above=r.top-16;
+  const useAbove= below<150 && above>below;
+  const maxH=Math.max(120, Math.min(420, useAbove?above:below));
+  const w=Math.min(Math.max(260, r.width), innerWidth-16);
+  const left=Math.min(Math.max(8, r.left), Math.max(8, innerWidth-8-w));
+  el.style.maxHeight=maxH+'px'; el.style.width=w+'px'; el.style.left=left+'px';
+  el.style.top=(useAbove? Math.max(8, r.top-Math.min(maxH, el.scrollHeight)-2) : r.bottom+2)+'px';
+}
 function showAc(ta, iid){
-  const list=ta.parentElement.querySelector('.ac-list'); if(!list) return;
+  acTa=ta; acIid=iid;
+  const el=acEl();
   const q=ta.value.trim().toLowerCase();
-  if(!q){ list.style.display='none'; return; }
-  const hits=productNames.filter(p=>p.toLowerCase().includes(q)).slice(0,20);
-  if(!hits.length){ list.style.display='none'; return; }
-  list.innerHTML='';
+  if(!q){ el.style.display='none'; return; }
+  const hits=productNames.filter(p=>p.toLowerCase().includes(q)).slice(0,30);
+  if(!hits.length){ el.style.display='none'; return; }
+  el.innerHTML='';
   hits.forEach(h=>{
     const d=document.createElement('div'); d.textContent=h;
-    d.onmousedown=e=>{ e.preventDefault(); updItem(iid,'product',h); };
-    list.appendChild(d);
+    d.onmousedown=e=>{ e.preventDefault(); el.style.display='none'; updItem(iid,'product',h); };
+    el.appendChild(d);
   });
-  list.style.display='block';
+  el.style.display='block';
+  acReposition();
 }
-function hideAc(ta){ setTimeout(()=>{ const l=ta.parentElement&&ta.parentElement.querySelector('.ac-list'); if(l) l.style.display='none'; },150); }
+function hideAc(ta){ setTimeout(()=>{ const el=document.getElementById('ac-global'); if(el) el.style.display='none'; },150); }
 
 function addItem(){
   const b=curBatch(); if(!b) return;
@@ -594,7 +624,6 @@ function renderBatchDetail(){
         <div style="position:relative">
           <textarea rows="1" placeholder="商品名" oninput="autoGrow(this);showAc(this,'${it.id}')" onfocus="showAc(this,'${it.id}')" onblur="hideAc(this)"
             onchange="updItem('${it.id}','product',this.value)">${esc(it.product)}</textarea>
-          <div class="ac-list"></div>
         </div>
         ${it._linked?'<span class="tag">帶入定價</span>':''}
       </td>
