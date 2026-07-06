@@ -371,6 +371,22 @@ function copyShareLink(){
   else prompt('請手動複製：',url);
 }
 
+// ---- 國際運費自動帶入（記帳 app 同網域）：運費只填記帳那邊，這裡自動讀 ----
+let ledgerFreight={};
+async function loadLedgerFreight(){
+  const url=localStorage.getItem('ledger_backend')||'';   // 記帳 app 存的後端網址（同網域共用）
+  if(!url) return;
+  try{
+    const r=await fetch(url+'?action=state&t='+Date.now()).then(x=>x.json());
+    if(r&&r.success&&r.state&&Array.isArray(r.state.entries)){
+      const m={};
+      r.state.entries.forEach(e=>{ if(e.type==='freight'&&e.batchId&&e.amount>0) m[e.batchId]=(m[e.batchId]||0)+e.amount; });
+      ledgerFreight=m;
+      if(currentBatchId) renderBatchDetail();
+    }
+  }catch(e){}
+}
+
 // ====================== TABS ======================
 function switchTab(tab, btn){
   document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
@@ -550,6 +566,8 @@ function computeItem(b, it){
 function renderBatchDetail(){
   const b=curBatch(); if(!b){ closeBatch(); return; }
   const L=LINES[b.line]||{label:b.line,sym:'NT$'};
+  const lf=ledgerFreight[b.id]||0;
+  if(lf>0 && !(b.freight>0)){ const oldV=b.freight; b.freight=lf; logChange(b,'(批次)','自動帶入','國際運費(記帳)',oldV,lf); save(); }
   let tFinal=0,tFreight=0,tTariff=0,tCharge=0;
   const rows=b.items.map(it=>{
     const c=computeItem(b,it);
@@ -627,7 +645,10 @@ function renderBatchDetail(){
       <div>
         <label class="fl">國際運費（${L.sym}，原幣）</label>
         <input type="number" value="${b.freight||''}" placeholder="${L.sym}" onchange="updBatch('freight',this.value)">
-        <div class="hint">打包時已知，不換匯</div>
+        ${lf>0 ? (Math.round(lf)===Math.round(b.freight||0)
+          ? '<div class="hint" style="color:var(--accent)">✓ 自動帶自記帳 app</div>'
+          : `<div class="hint" style="color:var(--warn)">⚠ 記帳 app 記的是 ${L.sym}${fmt(lf)}，兩邊不一致</div>`)
+          : '<div class="hint">記帳 app 記了會自動帶入；也可手填（不換匯）</div>'}
       </div>
       <div>
         <label class="fl">關稅（NT$）</label>
@@ -796,6 +817,7 @@ function init(){
   if(productNames.length){ setSync('ok','已載入 '+productNames.length+' 品（本機）'); }
   loadFromCloud();       // 從雲端載入批次（多人共用、會計可讀）
   syncFromCloud(false);  // 背景同步費率/商品
+  loadLedgerFreight();   // 讀記帳 app 的國際運費（運費只填記帳那邊）
 }
 init();
 </script>
