@@ -506,7 +506,14 @@ function showAc(ta, iid){
   el.innerHTML='';
   hits.forEach(h=>{
     const d=document.createElement('div'); d.textContent=h;
-    d.onmousedown=e=>{ e.preventDefault(); el.style.display='none'; updItem(iid,'product',h); };
+    d.onmousedown=e=>{
+      e.preventDefault(); el.style.display='none';
+      // 🚨 先把輸入框文字同步成完整品名＋收焦點，再更新資料：
+      // 否則 iOS Safari 會在稍後（例如填實秤時）對「已被重繪抽掉的舊輸入框」補發 change，
+      // 帶著打到一半的搜尋字把選好的品名蓋掉（2026-07-07 用戶回報）
+      if(acTa){ acTa.value=h; try{ acTa.blur(); }catch(_){} }
+      updItem(iid,'product',h);
+    };
     el.appendChild(d);
   });
   el.style.display='block';
