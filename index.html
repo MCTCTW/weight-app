@@ -527,6 +527,8 @@ function addItem(){
     status:'ok', est:0, priceRate:0, actual:0, manualCharge:0, transferred:false, note:'' });
   logChange(b,'(新列)','新增商品','','','新增一列');
   save(); renderBatchDetail();
+  // 新列在表格最底，捲過去讓它直接出現在眼前
+  setTimeout(()=>{ const sc=document.querySelector('#batch-detail-view .tbl-scroll'); if(sc) sc.scrollTop=sc.scrollHeight; },60);
 }
 function delItem(iid){ const b=curBatch(); const it=b.items.find(i=>i.id===iid); if(it) logChange(b, it.product||'(未命名)','刪除商品','', it.product||'', ''); b.items=b.items.filter(i=>i.id!==iid); save(); renderBatchDetail(); }
 
@@ -709,7 +711,6 @@ function renderBatchDetail(){
     <div class="flex" style="margin-bottom:8px;">
       <h2 style="margin:0;">商品明細</h2>
       <button class="btn sm right" onclick="copyProductList()">📋 複製商品清單</button>
-      <button class="btn sm" onclick="addItem()">＋ 加一筆</button>
     </div>
     <div class="legend">
       <span class="lg-intake">到倉登記</span>
@@ -739,8 +740,11 @@ function renderBatchDetail(){
         <th class="t-intake">備註</th>
         <th class="t-fin"></th>
       </tr></thead>
-      <tbody>${rows||'<tr><td colspan="18" class="empty">還沒有商品，點「＋ 加一筆」開始登記</td></tr>'}</tbody>
+      <tbody>${rows||'<tr><td colspan="18" class="empty">還沒有商品，點下方「＋ 加一筆」開始登記</td></tr>'}</tbody>
     </table>
+    </div>
+    <div style="margin-top:10px;">
+      <button class="btn primary" style="width:100%;max-width:340px;" onclick="addItem()">＋ 加一筆</button>
     </div>
     <div class="totals">
       <div class="stat"><div class="l">最終計重合計</div><div class="v">${fmt(tFinal)} <span class="hint" style="font-size:12px">g</span></div></div>
