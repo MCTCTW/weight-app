@@ -66,6 +66,9 @@ tr.tr-wait td:first-child{box-shadow:inset 3px 0 0 #378ADD;}
 tr.tr-wait input,tr.tr-wait select,tr.tr-wait textarea{background:#F5F9FD;color:var(--muted);border-color:#CFE0F0;}
 tr.tr-charge td{background:var(--danger-bg);}
 tr.tr-charge td:first-child{box-shadow:inset 3px 0 0 var(--danger);}
+tr.tr-fwd td{background:#E8F5EF;}
+tr.tr-fwd td:first-child{box-shadow:inset 3px 0 0 #1D7A5A;}
+tr.tr-fwd input,tr.tr-fwd select,tr.tr-fwd textarea{background:#F4FBF7;border-color:#CBE6D8;}
 .pill.forward{background:#E1F5EE;color:#0F6E56;}
 .pill.friend{background:#EEEDFE;color:#3C3489;}
 .muted{color:var(--muted);}
@@ -627,7 +630,7 @@ function renderBatchDetail(){
     const stPill = it.status==='waiting'?'<span class="pill waiting">等待到貨</span>':'<span class="pill unknown">未確認</span>';
     const overCell = noEst ? '<span class="hint">—</span>'
       : (c.over>0?`<span style="color:var(--danger)">+${c.over}</span>`:(c.over<0?`<span class="hint">${c.over}</span>`:'0'));
-    const rowCls = it.status==='waiting' ? 'tr-wait' : (!notOk && c.charge>0 && it.type!=='forward' ? 'tr-charge' : '');
+    const rowCls = it.status==='waiting' ? 'tr-wait' : (!notOk && c.charge>0 && it.type!=='forward' ? 'tr-charge' : (it.type==='forward' ? 'tr-fwd' : ''));
     return `<tr${rowCls?` class="${rowCls}"`:''}>
       <td class="w-name">
         <div style="position:relative">
