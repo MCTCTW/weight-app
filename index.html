@@ -69,6 +69,9 @@ tr.tr-charge td:first-child{box-shadow:inset 3px 0 0 var(--danger);}
 tr.tr-fwd td{background:#E8F5EF;}
 tr.tr-fwd td:first-child{box-shadow:inset 3px 0 0 #1D7A5A;}
 tr.tr-fwd input,tr.tr-fwd select,tr.tr-fwd textarea{background:#F4FBF7;border-color:#CBE6D8;}
+tr.tr-friend td{background:#F0EEFB;}
+tr.tr-friend td:first-child{box-shadow:inset 3px 0 0 #7A6FD0;}
+tr.tr-friend input,tr.tr-friend select,tr.tr-friend textarea{background:#F8F6FD;border-color:#DBD5F2;}
 .pill.forward{background:#E1F5EE;color:#0F6E56;}
 .pill.friend{background:#EEEDFE;color:#3C3489;}
 .muted{color:var(--muted);}
@@ -574,18 +577,38 @@ function copyProductList(){
 
 function sumActual(b){ return b.items.filter(i=>i.status==='ok' && i.actual>0).reduce((s,i)=>s+i.actual,0); }
 
+// ---- 分攤守恆：每件四捨五入後的零頭塞給最重那件 → 最終計重/運費/關稅「合計＝輸入值」（財務對帳） ----
+function allocMaps(b){
+  const sum=sumActual(b);
+  const factor= (sum>0&&b.billed>0) ? b.billed/sum : 0;
+  const F={},G={},T={};
+  let tf=0,tg=0,tt=0,heavy=null;
+  const isJp=b.line==='japan';
+  b.items.forEach(it=>{
+    if(it.status!=='ok'||!(it.actual>0)){ F[it.id]=0; return; }
+    const f=Math.round(it.actual*factor); F[it.id]=f; tf+=f;
+    if(!heavy||it.actual>heavy.actual) heavy=it;
+  });
+  if(heavy&&b.billed>0&&tf!==b.billed) F[heavy.id]+=b.billed-tf;
+  b.items.forEach(it=>{
+    const f=F[it.id]||0;
+    G[it.id]=b.billed>0?Math.round((b.freight||0)*f/b.billed):0; tg+=G[it.id];
+    T[it.id]=(isJp||!(b.billed>0))?0:Math.round((b.tariff||0)*f/b.billed); tt+=T[it.id];
+  });
+  if(heavy){
+    if((b.freight||0)>0&&tg!==b.freight) G[heavy.id]+=b.freight-tg;
+    if(!isJp&&(b.tariff||0)>0&&tt!==b.tariff) T[heavy.id]+=b.tariff-tt;
+  }
+  return {F,G,T};
+}
 // ---- core compute for one item ----
 function computeItem(b, it){
   const r={ final:0, over:0, charge:0, chargeLabel:'', allocFreight:0, allocTariff:0 };
   if(it.status!=='ok') return r;
-  const sum=sumActual(b);
-  const factor = sum>0 && b.billed>0 ? b.billed/sum : 0;
-  r.final = Math.round(it.actual*factor);
-  // 分攤運費(原幣)/關稅(TWD) 按最終計重
-  if(b.billed>0){
-    r.allocFreight = Math.round(b.freight * r.final / b.billed);
-    r.allocTariff  = (b.line==='japan')?0:Math.round(b.tariff * r.final / b.billed);
-  }
+  const M=allocMaps(b);
+  r.final = M.F[it.id]||0;
+  r.allocFreight = M.G[it.id]||0;
+  r.allocTariff  = M.T[it.id]||0;
   const shipRate = rates.shipping[b.line]||0;
   const tariffRate = rates.tariff[b.line]||0;
   if(it.type==='forward'){
@@ -630,7 +653,7 @@ function renderBatchDetail(){
     const stPill = it.status==='waiting'?'<span class="pill waiting">等待到貨</span>':'<span class="pill unknown">未確認</span>';
     const overCell = noEst ? '<span class="hint">—</span>'
       : (c.over>0?`<span style="color:var(--danger)">+${c.over}</span>`:(c.over<0?`<span class="hint">${c.over}</span>`:'0'));
-    const rowCls = it.status==='waiting' ? 'tr-wait' : (!notOk && c.charge>0 && it.type!=='forward' ? 'tr-charge' : (it.type==='forward' ? 'tr-fwd' : ''));
+    const rowCls = it.status==='waiting' ? 'tr-wait' : (!notOk && c.charge>0 && it.type!=='forward' ? 'tr-charge' : (it.friend ? 'tr-friend' : (it.type==='forward' ? 'tr-fwd' : '')));
     return `<tr${rowCls?` class="${rowCls}"`:''}>
       <td class="w-name">
         <div style="position:relative">
